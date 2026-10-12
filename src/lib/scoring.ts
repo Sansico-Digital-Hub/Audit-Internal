@@ -50,18 +50,32 @@ export function calc(ans: Record<string, Answer> = {}, SC: Section[] = PRODUCT_S
   return { secs, total: wsum ? (earned / wsum) * 100 : null, answered, dm };
 }
 
+const hasAns = (a: Audit | DeptAudit) => !!a.ans && Object.keys(a.ans).length > 0;
+
 export function calcOf(a: Audit | DeptAudit): Calc {
-  if ('unit' in a && a.unit) {
-    return calc(a.ans || {}, unitSecs(unitById(a.unit) || SEED_UNITS[0]));
+  const isDept = 'unit' in a && !!(a as DeptAudit).unit;
+  if (hasAns(a)) {
+    return isDept ? calc(a.ans, unitSecs(unitById((a as DeptAudit).unit) || SEED_UNITS[0])) : calc(a.ans);
   }
-  if (a.ans) return calc(a.ans);
-  const sc = (a.score || {}) as Record<string, number>;
+  // Audit impor: skor tersimpan (tanpa jawaban per poin).
+  const sc = (a.score || {}) as Record<string, number> & { cats?: number[] };
+
+  if (isDept) {
+    const secs: ScoreSection[] = unitSecs(unitById((a as DeptAudit).unit) || SEED_UNITS[0]).map((s, i) => {
+      const raw = Array.isArray(sc.cats) ? sc.cats[i] : undefined;
+      const ok = raw != null && Number.isFinite(Number(raw));
+      const p = Number(raw);
+      return { k: s.k, name: s.name, m: 0, d: 0, na: 0, pct: ok ? p / s.w : null, pts: ok ? p : null, w: s.w };
+    });
+    return { secs, total: sc.total != null ? Number(sc.total) : null, answered: 0, dm: Number(sc.dm) || 0, imp: true };
+  }
+
   const secs: ScoreSection[] = PRODUCT_SECTIONS.map((s) => {
     const p = Number(sc[s.k]);
     const ok = sc[s.k] != null && Number.isFinite(p);
     return { k: s.k, name: s.name, m: 0, d: 0, na: 0, pct: ok ? p / s.w : null, pts: ok ? p : null, w: s.w };
   });
-  return { secs, total: Number(sc.total), answered: 0, dm: Number(sc.dm) || 0, imp: true };
+  return { secs, total: sc.total != null ? Number(sc.total) : null, answered: 0, dm: Number(sc.dm) || 0, imp: true };
 }
 
 export const withCalc = <T extends Audit | DeptAudit>(a: T): T & { c: Calc } => ({ ...a, c: calcOf(a) });
