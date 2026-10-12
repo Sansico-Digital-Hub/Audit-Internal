@@ -8,6 +8,8 @@
 import fs from 'node:fs';
 import postgres from 'postgres';
 
+// DATABASE_URL dari shell menang atas file .env (agar bisa menargetkan DB online).
+const shellUrl = process.env.DATABASE_URL;
 for (const f of ['.env.local', '.env']) {
   if (fs.existsSync(f)) {
     try {
@@ -18,10 +20,17 @@ for (const f of ['.env.local', '.env']) {
   }
 }
 
-const url = process.env.DATABASE_URL;
+const url = shellUrl || process.env.DATABASE_URL;
 if (!url) {
   console.error('DATABASE_URL belum diset (.env).');
   process.exit(1);
+}
+
+try {
+  const u = new URL(url);
+  console.log(`[seed] target: ${u.hostname}:${u.port || '5432'}${u.pathname} (user ${u.username})`);
+} catch {
+  /* url tak standar */
 }
 
 const FALLBACK = {
