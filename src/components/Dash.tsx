@@ -35,20 +35,7 @@ function RangeControls({ filters, extra }: { filters: Filters; extra?: React.Rea
         Sampai
         <input type="date" value={to} onChange={(e) => set({ to: e.target.value, preset: 'custom' })} />
       </label>
-      <div className="chips preset-chips" style={{ alignSelf: 'end', paddingBottom: 2 }}>
-        {[['all', 'Semua'], ['4w', '4 minggu'], ['8w', '8 minggu'], ['month', 'Bulan ini']].map(([k, l]) => (
-          <button
-            key={k}
-            type="button"
-            className="btn ghost sm"
-            aria-pressed={preset === k}
-            onClick={() => set({ ...presetRange(k), preset: k })}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
-      <label className="f preset-select">
+      <label className="f">
         Rentang
         <select value={preset} onChange={(e) => set({ ...presetRange(e.target.value), preset: e.target.value })}>
           {[['all', 'Semua'], ['4w', '4 minggu'], ['8w', '8 minggu'], ['month', 'Bulan ini']].map(([k, l]) => (

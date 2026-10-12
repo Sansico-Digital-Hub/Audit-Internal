@@ -1594,18 +1594,7 @@ textarea:focus {
   gap: 8px;
 }
 
-/* ===== Rentang (preset) jadi dropdown di mobile ===== */
-.preset-select {
-  display: none;
-}
-@media (max-width: 640px) {
-  .preset-chips {
-    display: none;
-  }
-  .preset-select {
-    display: grid;
-  }
-}
+/* ===== Rentang (preset) dropdown di semua ukuran ===== */
 
 /* ===== Field PIN khusus ===== */
 .pin-field {
