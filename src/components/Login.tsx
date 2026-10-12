@@ -12,7 +12,7 @@ interface Cfg {
   areas: { id: string; name: string }[];
 }
 
-const SHORT: Record<Role, string> = { prod: 'Produksi', auditor: 'Auditor', admin: 'Admin' };
+const SHORT: Record<Role, string> = { prod: 'Departemen', auditor: 'Auditor', admin: 'Admin' };
 
 export default function Login() {
   const router = useRouter();
@@ -68,9 +68,6 @@ export default function Login() {
 
   return (
     <>
-      <div style={{ textAlign: 'center', paddingTop: 6 }}>
-        <h2>Audit Internal</h2>
-      </div>
       <section className="card login">
         <p className="muted" style={{ margin: 0 }}>
           {setup
