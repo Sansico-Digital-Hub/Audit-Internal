@@ -54,19 +54,6 @@ export default function Sidebar({
 
           if (l.children) {
             const childActive = l.children.some((c) => pathname === c.href);
-            if (collapsed) {
-              return (
-                <Link
-                  key={l.href}
-                  href={l.children[0].href}
-                  className={`nav-item${childActive ? ' active' : ''}`}
-                  onClick={onNavigate}
-                  title={l.label}
-                >
-                  <Icon />
-                </Link>
-              );
-            }
             const isOpen = openGroups[l.href] ?? childActive;
             return (
               <div key={l.href} className="nav-group">
@@ -74,6 +61,7 @@ export default function Sidebar({
                   type="button"
                   className={`nav-item${childActive ? ' active' : ''}`}
                   aria-expanded={isOpen}
+                  title={l.label}
                   onClick={() => setOpenGroups((o) => ({ ...o, [l.href]: !isOpen }))}
                 >
                   <Icon />

@@ -1486,3 +1486,104 @@ textarea:focus {
 .area-row input {
   flex: 1;
 }
+
+/* ===== grup nav collapsed: sembunyikan anak & chevron (desktop rail) ===== */
+.sidebar.collapsed .nav-chevron,
+.sidebar.collapsed .nav-children {
+  display: none;
+}
+@media (max-width: 900px) {
+  .sidebar.collapsed .nav-chevron {
+    display: inline-flex;
+  }
+  .sidebar.collapsed .nav-children {
+    display: flex;
+  }
+}
+
+/* ===== Detail riwayat: sheet dari kanan ===== */
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  border: 0;
+  z-index: 55;
+}
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(560px, 100%);
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+  z-index: 60;
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+.drawer.open {
+  transform: none;
+}
+.drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  flex: none;
+}
+.drawer-body {
+  padding: 16px;
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer {
+    transition: none;
+  }
+}
+
+/* ===== Filter ramah mobile ===== */
+@media (max-width: 640px) {
+  .bar-top {
+    display: grid;
+    gap: 12px;
+  }
+  .bar-top .ctrl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: end;
+  }
+  .bar-top .ctrl .chips {
+    grid-column: 1 / -1;
+  }
+  .bar-top .ctrl > button {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+  .bar-top .ctrl label.f {
+    min-width: 0;
+  }
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .filters label.f {
+    min-width: 0;
+  }
+  .filters > button {
+    grid-column: 1 / -1;
+  }
+  .drawer {
+    width: 100%;
+  }
+}
