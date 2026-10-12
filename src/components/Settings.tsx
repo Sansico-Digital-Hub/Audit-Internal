@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useApp } from './ctx';
+import { IconClose } from './icons';
 import { api, now } from '@/lib/client';
 import { clLabel, clSecOpts } from '@/lib/catalog';
 import { CUSTOM_BASE, ROLE_LABEL } from '@/lib/constants';
@@ -10,22 +11,35 @@ import type { CustomItem, Role } from '@/lib/types';
 
 export function AreasView({ areas, reload }: { areas: { id: string; name: string }[]; reload: () => void }) {
   const { toast } = useApp();
-  const [override, setOverride] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState<{ id: string; name: string }[] | null>(null);
   const [busy, setBusy] = useState(false);
-  const valueOf = (a: { id: string; name: string }) => override[a.id] ?? a.name;
+  const list = draft ?? areas;
+
+  function edit(id: string, name: string) {
+    setDraft((d) => (d ?? areas).map((a) => (a.id === id ? { ...a, name } : a)));
+  }
+  function remove(id: string) {
+    setDraft((d) => (d ?? areas).filter((a) => a.id !== id));
+  }
+  function add() {
+    const id = 'ar' + now().toString(36);
+    setDraft((d) => [...(d ?? areas), { id, name: '' }]);
+  }
 
   async function save() {
+    const clean = list.map((a) => ({ id: a.id, name: a.name.trim() })).filter((a) => a.name);
+    if (!clean.length) {
+      toast('Minimal satu area harus punya nama.');
+      return;
+    }
     setBusy(true);
     try {
-      await api('/api/config/areas', {
-        method: 'PUT',
-        body: JSON.stringify({ list: areas.map((a) => ({ id: a.id, name: valueOf(a).trim() || a.id })) }),
-      });
-      toast('Nama area tersimpan');
-      setOverride({});
+      await api('/api/config/areas', { method: 'PUT', body: JSON.stringify({ list: clean }) });
+      toast('Daftar area tersimpan');
+      setDraft(null);
       reload();
     } catch {
-      toast('Gagal menyimpan nama area.');
+      toast('Gagal menyimpan daftar area.');
     }
     setBusy(false);
   }
@@ -35,25 +49,38 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
       <div>
         <h2>Daftar Area</h2>
         <p className="muted" style={{ margin: '4px 0 0' }}>
-          Sesuaikan nama area dengan area produksi sebenarnya. Perubahan nama berlaku untuk form dan dashboard, audit lama tetap tersimpan.
+          Tambah, ubah nama, atau hapus area produksi. Perubahan berlaku untuk form dan dashboard; audit lama tetap tersimpan
+          (area yang dihapus tidak lagi tampil di dashboard).
         </p>
       </div>
       <section className="card pnl">
         <div className="meta" style={{ padding: 0 }}>
-          {areas.map((a, i) => (
-            <label className="f" key={a.id}>
-              Area {i + 1}
+          {list.map((a, i) => (
+            <div className="area-row" key={a.id}>
               <input
                 type="text"
-                value={valueOf(a)}
-                onChange={(e) => setOverride((o) => ({ ...o, [a.id]: e.target.value }))}
+                value={a.name}
+                placeholder={`Nama area ${i + 1}`}
+                onChange={(e) => edit(a.id, e.target.value)}
               />
-            </label>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="Hapus area"
+                onClick={() => remove(a.id)}
+                disabled={list.length <= 1}
+              >
+                <IconClose />
+              </button>
+            </div>
           ))}
         </div>
-        <div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+          <button className="btn ghost" type="button" onClick={add}>
+            + Tambah area
+          </button>
           <button className="btn" type="button" disabled={busy} onClick={save}>
-            Simpan nama area
+            Simpan
           </button>
         </div>
       </section>

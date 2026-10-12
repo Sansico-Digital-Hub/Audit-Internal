@@ -14,9 +14,10 @@ export async function GET() {
     const areasCfg = await getConfig<AreasConfig>('areas');
     const customCfg = await getConfig<CustomConfig>('customitems');
 
-    const byId: Record<string, string> = {};
-    (areasCfg?.list || []).forEach((a) => (byId[a.id] = a.name));
-    const areas = DEFAULT_AREA_NAMES.map((name, i) => ({ id: 'a' + (i + 1), name: byId['a' + (i + 1)] || name }));
+    const stored = (areasCfg?.list || []).filter((a) => a && a.id && typeof a.name === 'string');
+    const areas = stored.length
+      ? stored.map((a) => ({ id: String(a.id), name: String(a.name) }))
+      : DEFAULT_AREA_NAMES.map((name, i) => ({ id: 'a' + (i + 1), name }));
 
     return NextResponse.json({
       session: s ? { role: s.role, area: s.area } : null,
