@@ -122,10 +122,11 @@ export default function Login() {
             <input
               type={showPin ? 'text' : 'password'}
               inputMode="numeric"
+              pattern="[0-9]*"
               autoComplete="off"
               value={pin}
               placeholder="••••••"
-              onChange={(e) => setPin(e.target.value)}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') doLogin();
               }}
