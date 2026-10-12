@@ -51,6 +51,7 @@ npm run typecheck   # cek TypeScript
 npm run lint        # ESLint
 npm run build       # build produksi
 npm run db:generate # buat file migrasi dari perubahan schema
+npm run db:seed     # isi area (dari referensi) + contoh data audit agar dashboard berisi
 ```
 
 ## Deploy on-premise (Docker Compose)
