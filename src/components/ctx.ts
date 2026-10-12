@@ -18,6 +18,7 @@ export interface AppCtxType {
   setup: boolean;
   audits: Audit[];
   daudits: DeptAudit[];
+  loading: boolean;
   openCount: number;
   toast: (m: string) => void;
   openPhoto: (src: string) => void;

@@ -1450,3 +1450,39 @@ textarea:focus {
   }
 }
 
+
+/* ===== Skeleton loading ===== */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--neutral-100);
+  border-radius: var(--r-md);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: shimmer 1.3s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
+/* baris area (tambah/hapus) */
+.area-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.area-row input {
+  flex: 1;
+}

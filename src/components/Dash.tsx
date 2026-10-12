@@ -146,20 +146,6 @@ export function ProdDashboard({
   const sections = catalog.sections;
   const resolveArea = (id: string) => areas.find((a) => a.id === id)?.name || id;
 
-  if (!VA.length)
-    return (
-      <>
-        <div className="bar-top">
-          <h2>{role === 'prod' ? 'Tren Audit · ' + resolveArea(scopeArea) : 'Dashboard Monitoring'}</h2>
-        </div>
-        <div className="card empty">
-          <b>Belum ada hasil audit.</b>
-          <br />
-          Isi form di tab Input Audit. Setelah disimpan, skor semua area, tren, dan temuan tampil di sini.
-        </div>
-      </>
-    );
-
   const lat = latestByArea(periodAudits);
   const rows = VAr.map((a) => ({ i: areas.indexOf(a), a, au: lat[a.id] ? withCalc(lat[a.id]) : null }));
   const done = rows.filter((r) => r.au && r.au.c.total != null) as { i: number; a: { id: string; name: string }; au: Audit & { c: Calc } }[];
@@ -495,18 +481,6 @@ export function DeptDashboard({
       />
     </div>
   );
-
-  if (!VD.length)
-    return (
-      <>
-        {head}
-        <div className="card empty">
-          <b>Belum ada hasil audit departemen.</b>
-          <br />
-          Isi form di tab Input Audit, lalu pilih Departemen lain.
-        </div>
-      </>
-    );
 
   const lat: Record<string, DeptAudit> = {};
   list.forEach((a) => {

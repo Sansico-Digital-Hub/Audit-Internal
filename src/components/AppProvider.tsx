@@ -26,14 +26,18 @@ export default function AppProvider({ initialSession, children }: { initialSessi
   const session = cfg ? cfg.session : initialSession;
   const loggedIn = !!session;
 
-  const { data: audits = [], mutate: mutateAudits } = useSWR<Audit[]>(loggedIn ? '/api/audits' : null, fetcher, {
-    refreshInterval: 30000,
-    fallbackData: [],
-  });
-  const { data: daudits = [], mutate: mutateD } = useSWR<DeptAudit[]>(loggedIn ? '/api/daudits' : null, fetcher, {
-    refreshInterval: 30000,
-    fallbackData: [],
-  });
+  const { data: audits, mutate: mutateAudits, isLoading: auditsLoading } = useSWR<Audit[]>(
+    loggedIn ? '/api/audits' : null,
+    fetcher,
+    { refreshInterval: 30000 },
+  );
+  const { data: daudits, mutate: mutateD, isLoading: dauditsLoading } = useSWR<DeptAudit[]>(
+    loggedIn ? '/api/daudits' : null,
+    fetcher,
+    { refreshInterval: 30000 },
+  );
+  const auditsArr = audits ?? [];
+  const dauditsArr = daudits ?? [];
 
   const [toastMsg, setToastMsg] = useState<{ m: string; k: number } | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -57,7 +61,8 @@ export default function AppProvider({ initialSession, children }: { initialSessi
 
   const catalog = useMemo(() => buildCatalog(cfg?.custom || []), [cfg?.custom]);
   const areas = cfg?.areas ?? [];
-  const openCount = openCounts(audits, daudits);
+  const openCount = openCounts(auditsArr, dauditsArr);
+  const loading = !cfg || (loggedIn && (auditsLoading || dauditsLoading));
 
   const toast = (m: string) => setToastMsg({ m, k: now() });
   const refresh = () => {
@@ -80,8 +85,9 @@ export default function AppProvider({ initialSession, children }: { initialSessi
         access: cfg?.access ?? { prod: false, auditor: false, admin: false },
         envManaged: cfg?.envManaged ?? { prod: false, auditor: false, admin: false },
         setup: !!cfg?.setup,
-        audits,
-        daudits,
+        audits: auditsArr,
+        daudits: dauditsArr,
+        loading,
         openCount,
         toast,
         openPhoto: setPhoto,
