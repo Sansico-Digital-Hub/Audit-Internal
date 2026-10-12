@@ -76,6 +76,8 @@ docker compose up -d --build
 
 Compose menjalankan `migrate` (sekali jalan, `drizzle-kit migrate`) lalu `app`. Set `SESSION_COOKIE_SECURE=true` bila dilayani via HTTPS (mis. di belakang Caddy/nginx), biarkan `false` bila HTTP.
 
+> **Migrasi otomatis:** aplikasi juga menjalankan migrasi saat start (`src/instrumentation.ts`), jadi tabel dibuat otomatis terhadap `DATABASE_URL` — tidak wajib langkah `migrate` terpisah. Set `SKIP_MIGRATE=1` untuk mematikannya. Cek kesiapan di `GET /api/health`.
+
 ## Catatan
 
 - **PIN per peran via environment**: `PIN_ADMIN`, `PIN_PRODUKSI`, `PIN_AUDITOR`. Bila diisi, PIN tersebut yang berlaku dan kolom di halaman **Akses** menjadi read-only. Hapus variabelnya bila ingin mengatur PIN dari halaman Akses.
