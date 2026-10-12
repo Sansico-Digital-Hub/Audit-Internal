@@ -25,6 +25,15 @@ export async function GET() {
     out.tables = tables;
     out.missingTables = missing;
     out.ready = missing.length === 0;
+
+    if (missing.length === 0) {
+      const [c] = await sql<{ audits: number; dept_audits: number; areas: number }[]>`
+        select
+          (select count(*) from audits)::int as audits,
+          (select count(*) from dept_audits)::int as dept_audits,
+          coalesce((select jsonb_array_length(value->'list') from config where key = 'areas'), 0) as areas`;
+      out.counts = { audits: c.audits, dept_audits: c.dept_audits, areas: c.areas };
+    }
   } catch (e) {
     out.db = 'error';
     out.ready = false;
