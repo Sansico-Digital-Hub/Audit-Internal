@@ -17,6 +17,7 @@ const SHORT: Record<Role, string> = { prod: 'Produksi', auditor: 'Auditor', admi
 export default function Login() {
   const router = useRouter();
   const [cfg, setCfg] = useState<Cfg | null>(null);
+  const [cfgErr, setCfgErr] = useState('');
   const [lrole, setLrole] = useState<Role>('prod');
   const [pin, setPin] = useState('');
   const [area, setArea] = useState('a1');
@@ -25,9 +26,19 @@ export default function Login() {
 
   useEffect(() => {
     fetch('/api/config')
-      .then((r) => r.json())
-      .then((c: Cfg) => setCfg(c))
-      .catch(() => setCfg({ setup: true, areas: [] }));
+      .then(async (r) => {
+        const c = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          setCfgErr((c as { error?: string }).error || 'Gagal memuat konfigurasi server.');
+          setCfg({ setup: false, areas: [] });
+          return;
+        }
+        setCfg(c as Cfg);
+      })
+      .catch(() => {
+        setCfgErr('Tidak bisa menghubungi server. Cek koneksi atau buka /api/health.');
+        setCfg({ setup: false, areas: [] });
+      });
   }, []);
 
   const setup = !!cfg?.setup;
@@ -66,6 +77,11 @@ export default function Login() {
             ? 'Belum ada PIN. Pilih Admin dan buat PIN admin. Lakukan ini lebih dulu sebelum tautan dibagikan ke tim.'
             : 'Pilih peran, lalu masukkan PIN.'}
         </p>
+        {cfgErr && (
+          <div className="banner" style={{ marginTop: 0 }}>
+            {cfgErr}
+          </div>
+        )}
         <div className="seg roles" role="radiogroup" aria-label="Peran">
           {(['prod', 'auditor', 'admin'] as Role[]).map((r) => (
             <button
@@ -116,7 +132,7 @@ export default function Login() {
         <div className="muted" style={{ minHeight: 18 }}>
           {msg}
         </div>
-        <button className="btn" type="button" disabled={busy} onClick={doLogin}>
+        <button className="btn" type="button" disabled={busy || !cfg} onClick={doLogin}>
           {setup ? 'Buat PIN dan masuk' : 'Masuk'}
         </button>
         <div className="muted" style={{ fontSize: 12 }}>
