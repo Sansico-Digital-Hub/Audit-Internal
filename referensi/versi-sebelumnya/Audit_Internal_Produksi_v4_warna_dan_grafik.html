@@ -1,0 +1,943 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Audit Internal Produksi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky top bar with tabs; form = single column of 4 audit sections + sticky score bar;
+   dashboard = KPI strip, area x komponen heatmap, trend + komponen + recurring findings. */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --surface2:#eef2f5; --ink:#14202b; --muted:#5a6a78; --line:#d9e0e6;
+  --accent:#0a6f9c; --accent-ink:#ffffff; --accent-soft:#dff0f8;
+  --good:#0a9a4a; --good-bg:#c2f5d6; --good-ink:#065f2d; --good-fill:#2fdb6e;
+  --warn:#8a5a00; --warn-bg:#ffeb9e; --warn-ink:#7a4e00; --warn-fill:#ffc82e;
+  --bad:#e5202f; --bad-bg:#ffcdd1; --bad-ink:#a30d1a; --bad-fill:#ff5560;
+  --on-good:#04301a; --on-bad:#3b0408;
+  --na:#5f6d7a; --na-bg:#e6ebef; --na-ink:#5f6d7a; --na-fill:#a3afba;
+  --c1:#2b5f9e; --c2:#b45f06; --c3:#1f7a6e; --c4:#6b4c98; --seg-ink:#ffffff;
+  --f-display:'Barlow Condensed','Arial Narrow',sans-serif; --f-body:'IBM Plex Sans',system-ui,sans-serif; --f-mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e151c; --surface:#16202a; --surface2:#1d2935; --ink:#e7eef4; --muted:#93a3b2; --line:#2b3947;
+  --accent:#4cb8e6; --accent-ink:#04222f; --accent-soft:#12303f;
+  --good:#4ee68a; --good-bg:#17542f; --good-ink:#c4fbd8; --good-fill:#3ddc84;
+  --warn:#ffd24a; --warn-bg:#524008; --warn-ink:#ffe08a; --warn-fill:#f5c542;
+  --bad:#ff6b6b; --bad-bg:#6a1d22; --bad-ink:#ffd0d0; --bad-fill:#ff5c5c;
+  --na:#9aa8b5; --na-bg:#253240; --na-ink:#9aa8b5; --na-fill:#8896a3; --c1:#6ea8ee; --c2:#f0a25a; --c3:#4cc9b8; --c4:#b39bdc; --seg-ink:#06131d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e151c; --surface:#16202a; --surface2:#1d2935; --ink:#e7eef4; --muted:#93a3b2; --line:#2b3947;
+  --accent:#4cb8e6; --accent-ink:#04222f; --accent-soft:#12303f;
+  --good:#4ee68a; --good-bg:#17542f; --good-ink:#c4fbd8; --good-fill:#3ddc84;
+  --warn:#ffd24a; --warn-bg:#524008; --warn-ink:#ffe08a; --warn-fill:#f5c542;
+  --bad:#ff6b6b; --bad-bg:#6a1d22; --bad-ink:#ffd0d0; --bad-fill:#ff5c5c;
+  --na:#9aa8b5; --na-bg:#253240; --na-ink:#9aa8b5; --na-fill:#8896a3; --c1:#6ea8ee; --c2:#f0a25a; --c3:#4cc9b8; --c4:#b39bdc; --seg-ink:#06131d; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:0 96px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;padding:12px 16px 0;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:flex-end;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand svg{flex:none}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:.02em;margin:0;text-transform:uppercase;line-height:1}
+.brand small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;max-width:100%}
+nav.tabs button{font:inherit;font-weight:500;color:var(--muted);background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px 9px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button:hover{color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{font-family:var(--f-display);font-size:22px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;margin:0;text-wrap:balance}
+h3{font-size:14px;margin:0;font-weight:600}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.banner{margin-top:14px;padding:10px 14px;border-radius:6px;background:var(--warn-bg);color:var(--warn);font-weight:500}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.view{padding-top:18px;display:grid;gap:18px}
+/* form */
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding:16px}
+label.f{display:grid;gap:4px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}
+input[type=text],input[type=date],select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%;min-height:40px}
+textarea{min-height:64px;resize:vertical}
+label.f input,label.f select{text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:0 16px 14px;color:var(--muted);font-size:13px}
+.sec{overflow:hidden}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--line)}
+.sec-h .pol{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.sec-h .sc{font-family:var(--f-mono);font-size:13px}
+.item{padding:14px 16px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.item:last-child{border-bottom:0}
+.item.bad-field{box-shadow:inset 3px 0 0 var(--bad)}
+.item-head{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:start}
+.num{font-family:var(--f-mono);color:var(--muted);padding-top:2px}
+.req{font-weight:500;min-width:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-weight:600;min-width:54px;min-height:44px;border:0;border-right:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-checked="true"][data-v="M"]{background:var(--good-fill);color:var(--on-good)}
+.seg button[aria-checked="true"][data-v="DM"]{background:var(--bad-fill);color:var(--on-bad)}
+.seg button[aria-checked="true"][data-v="NA"]{background:var(--na-bg);color:var(--na)}
+details.ref{margin-left:40px;color:var(--muted);font-size:13px}
+details.ref summary{cursor:pointer;width:max-content;color:var(--accent);font-weight:500}
+details.ref ul{margin:6px 0 0;padding-left:18px;display:grid;gap:3px}
+.dm{margin-left:40px;padding:12px;border:1px dashed var(--bad);border-radius:6px;background:color-mix(in srgb,var(--bad-bg) 55%,transparent);display:grid;gap:10px}
+.dm .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.sticky-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.sticky-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between}
+.big{font-family:var(--f-display);font-size:34px;font-weight:700;line-height:1}
+.parts{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.parts b{color:var(--ink);font-family:var(--f-mono);font-weight:500}
+.btn{font:inherit;font-weight:600;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);padding:10px 18px;min-height:42px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.sm{padding:6px 10px;min-height:32px;font-size:13px}
+.btn.danger{border-color:var(--bad);color:var(--bad);background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;z-index:40;font-weight:500;max-width:90vw}
+/* dashboard */
+.bar-top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;justify-content:space-between}
+.bar-top .ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.kpi{padding:14px 16px;display:grid;gap:4px}
+.kpi .lab{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.kpi .val{font-family:var(--f-display);font-size:40px;font-weight:700;line-height:1}
+.kpi .sub{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.good{background:var(--good-bg);color:var(--good-ink)}.pill.warn{background:var(--warn-bg);color:var(--warn-ink)}.pill.bad{background:var(--bad-bg);color:var(--bad-ink)}.pill.na{background:var(--na-bg);color:var(--na)}
+.pnl{padding:16px;display:grid;gap:12px;min-width:0}
+.pnl-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+td.n,th.n{text-align:center}
+.hm td.c{text-align:center;font-family:var(--f-mono);font-weight:500;min-width:84px}
+.hm td.c.good{background:var(--good-bg);color:var(--good-ink)}.hm td.c.warn{background:var(--warn-bg);color:var(--warn-ink)}.hm td.c.bad{background:var(--bad-bg);color:var(--bad-ink)}.hm td.c.na{background:var(--na-bg);color:var(--na)}
+.tot{display:flex;align-items:center;gap:8px;min-width:140px}
+.tot .tb{flex:1;height:8px;background:var(--surface2);border-radius:4px;position:relative;overflow:hidden}
+.tot .tb i{position:absolute;inset:0 auto 0 0;border-radius:4px}
+.tot .tb i.good{background:var(--good-fill)}.tot .tb i.warn{background:var(--warn-fill)}.tot .tb i.bad{background:var(--bad-fill)}
+.grid2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.rows{display:grid;gap:10px}
+.rrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}
+.rrow .nm{min-width:0}
+.rrow .track{grid-column:1/-1;height:8px;border-radius:4px;background:var(--surface2);overflow:hidden}
+.rrow .track i{display:block;height:100%;background:var(--bad-fill);border-radius:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:3px 10px;border-radius:99px;background:var(--na-bg);color:var(--na);font-size:12px;font-weight:500}
+svg text{fill:var(--muted);font-family:var(--f-body);font-size:11px}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .std{stroke:var(--warn);stroke-dasharray:4 4;stroke-width:1.5}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+/* findings */
+.fcard{padding:14px 16px;display:grid;gap:10px}
+.fcard .hd{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.fcard .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.fcard .find{background:var(--bad-bg);color:var(--ink);padding:8px 10px;border-radius:6px}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.filters label.f{min-width:150px}
+.ph{display:grid;gap:8px}
+.ph-list{display:flex;flex-wrap:wrap;gap:8px}
+.ph-item{position:relative}
+.thumb{width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--surface2);cursor:zoom-in;display:block}
+.ph-x{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:0;background:var(--bad);color:#fff;font-weight:700;cursor:pointer;line-height:1}
+.ph-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ph-btns label.btn{display:inline-flex;align-items:center}
+.lb{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+.lb img{max-width:100%;max-height:100%;border-radius:6px}
+.login{max-width:420px;margin:28px auto 0;padding:20px;display:grid;gap:14px}
+.roles{display:flex;width:100%}
+.roles button{flex:1;font:inherit;font-weight:600;min-height:44px;border:0;border-right:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+.roles button:last-child{border-right:0}
+.roles button[aria-checked="true"]{background:var(--accent-soft);color:var(--accent)}
+.roles button:disabled{opacity:.4;cursor:not-allowed}
+#who{display:flex;gap:8px;align-items:center;padding-bottom:8px}
+.btn.sm[aria-pressed="true"]{background:var(--accent-soft)}
+.legend2{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
+.legend2 i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+svg .sl{fill:var(--seg-ink);font-size:11px;font-weight:600}
+svg .tl{font-size:10.5px;font-weight:600}
+svg .an{fill:var(--ink);font-size:10.5px;font-weight:600}
+.hm th.stick,.hm td.stick{position:sticky;left:0;background:var(--surface);z-index:1;text-align:left;min-width:150px}
+.catpills{display:flex;flex-wrap:wrap;gap:4px}
+.catpills .pill{font-size:11px;font-weight:500}
+.hist-detail{padding:4px 0 8px;display:grid;gap:6px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="9" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M17 2v30M2 17h30" stroke="var(--ink)" stroke-width="1.5"/><circle cx="17" cy="17" r="3" fill="var(--bad)"/></svg>
+      <div><h1>Audit Internal</h1><small>Process Audit Checklist · 17 area produksi + 8 unit departemen · skor M / DM</small></div>
+    </div>
+    <nav class="tabs" role="tablist" id="tabs"></nav><div id="who"></div>
+  </div>
+</header>
+<main class="wrap"><div id="banner"></div><div id="view" class="view"></div></main>
+<div id="bar"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const ITEMS = [{"n": 1, "t": "Approved sample tersedia dari Engineering", "r": "1. Sample yang digunakan benar sesuai item yang sedang jalan.\n2. Label hijau pengisian lengkap beserta verifikasinya"}, {"n": 2, "t": "(QAFA) Sample acuan / FRA sesuai Approved Sample", "r": "1. FRA tersedia dan sesuai item yang sedang jalan dan\n2. Pengisian label FRA lengkap dan benar sesuai sample.\n3. Kualitas FRA sesuai dengan approved sample."}, {"n": 3, "t": "Produk yang sedang berjalan sesuai dengan FRA dan toleransi / shade band", "r": "1. Identitas Item yang berjalan sesuai dengan RHHP, FRA, dan approved sample\n2. Kualitas produk yang ada di green bin/ palet sesuai dengan FRA, sample dan shadeband (jika ada) (untuk retail/pcs: sampling 10, untuk sheet: sampling 2)"}, {"n": 4, "t": "Toleransi atau limit sample defect tersedia", "r": "1. Limit sample, Shadeband, sample defect yang digunakan sesuai dengan produknya\n2. Limit sample hanya boleh di ACC oleh SPV - Manager QA/QC, PE dan Plant Manager\n3. Shadeband yang digunakan sudah di verifikasi oleh PE & Quality."}, {"n": 5, "t": "Reject telah dicatat dengan benar per 2 jam", "r": "1. Laporan reject workcenter tersedia \n2. Pengisian reject workcenter lengkap dan benar\n3. Kode reject dan qty reject dengan aktual barang reject sesuai."}, {"n": 6, "t": "Reject tidak melebihi standard yang sudah ditentukan", "r": "Printing: 5000 ppm\nDie cut: 3000 ppm\nProses lain: 2000 ppm\nIM: 3000 ppm\nppm pada laporan reject workcenter (kecuali reject setting)"}, {"n": 7, "t": "Parameter kualitas tersedia di area kerja (CTQ & Visual Defect)", "r": "1. CTQ & Visual Defect tersedia, benar, lengkap, dan diketahui operator di area kerja\n2. Operator mengetahui point-point CTQ & Visual Defect yang tersedia di area kerja"}, {"n": 8, "t": "Parameter proses (CTP) dan prosedur/AK dipenuhi", "r": "1. CTP & AK tersedia, benar, lengkap, dan diketahui operator di area kerja\n2. Operator mengetahui point-point CTP & AK yang tersedia di area kerja"}, {"n": 9, "t": "Andon yang tesedia berfungsi dan sesuai keadaan aktual", "r": "1. Operator mengerti penggunaan dan fungsi andon yang ada di mesin/area\n2. Andon sesuai dengan keadaan aktual"}, {"n": 10, "t": "Aktual produksi mengikuti Layout IE", "r": "1. Item yang berjalan sesuai dengan layout\n2. Jumlah dan jobdesc operator sesuai dengan layout \n3. Layout IE sesuai RHHP"}, {"n": 11, "t": "Kondisi mesin dan tools beroperasi dengan baik dan sesuai dengan toleransi atau batasan tertentu", "r": "1. Pengecekan part-part mesin dan tools sesuai dengan parameter\n2. Bagian-bagian mesin dan tools berfungsi dengan benar"}, {"n": 12, "t": "Defect produk telah dipisahkan atau diberi tanda/ Barang yang sudah dihold tidak melebihi 1x24 jam", "r": "1. Barang hold & reject tersegregasi dengan benar sesuai dengan tempatnya\n2. Barang reject /hold ada label identitas dengan isi yang benar dan jelas\n3. Barang hold dengan issue quality harus diselesaikan dalam 1x24 jam"}, {"n": 13, "t": "Red Bin / visual control dilakukan sesuai standar", "r": "1. Red bin/visual control digunakan sesuai fungsi\n2. Isi red bin/visual control tidak boleh melebihi ppm standard."}, {"n": 14, "t": "AM/TPM Harian Mesin dilakukan sesuai jadwal", "r": "1. AM/TPM Harian tersedia di setiap mesin dan point-point AM sesuai dengan mesinnya\n2. AM/TPM Harian diisi/ceklis sesuai dengan jadwal\n3. Operator melakukan TPM dengan benar (cek point TPM dan interview operator)"}, {"n": 15, "t": "Jadwal Produksi dan RHHP sesuai", "r": "1. RHHP tersedia\n2. Produk yang sedang berjalan sesuai dengan RHHP (tidak ditulis manual oleh operator)\n3. Pengisian RHHP benar, diisi per jam, dan sudah diverifikasi oleh planner & spv"}, {"n": 16, "t": "(QAFA) Lembar checksheet diisi tepat waktu dan benar sesuai dengan RHHP", "r": "1. Checksheet yang digunakan sesuai dengan proses dan acuan kerja\n2. Pengisian checksheet benar dan lengkap sesuai produk yang sedang proses (termasuk nama supplier & no lot/batch)\n3. Operator mengetahui point-point pada checksheet dan dilakukan dengan benar"}, {"n": 17, "t": "No. SPK/Lot/batch/PO tersedia untuk traceability", "r": "1. No. SPK/Lot/batch/PO tercantum pada RHHP dan checksheet\n2. No. SPK/PO pada checksheet sesuai dengan RHHP \n3. No.Lot/Batch material yang digunakan tercantum pada checksheet dan sesuai dengan aktual.\n4. Penulisan & penggunaan material di actual tercatat pada checklist dokumen/checksheet sesuai dengan material yang sudah diapproved oleh customer/sample awal (cek NPOF)"}, {"n": 18, "t": "Material yang digunakan sesuai sudah pass inspeksi incoming", "r": "Cek report incoming"}, {"n": 19, "t": "Jadwal Gemba / 5R / Kebersihan tersedia", "r": "1. Ceklist 5R tersedia di setiap mesin/area \n2. Ceklist 5R sesuai dengan jadwal\n3. Operator melakukan 5R dengan benar (cek point 5R dan interview operator)"}, {"n": 20, "t": "(QAFA) Perbaikan proses / Kaizen dilakukan secara kontinyu", "r": "1. Ada kaizen di area\n2. Action Plan dari kaizen dilakukan secara kontinyu\n3. Operator dan leader mengetahui action plan dari kaizen.\n(masa berlaku 3 bulan per kaizen)"}, {"n": 21, "t": "Follow up CAPA telah dilakukan sesuai rencana", "r": "CAPA Customer complain, audit internal, dan ketidaksesuaian lainnya:\n1. Pengisian CAPA lengkap, logis, dan diverifikasi oleh SPV/Leader & Dept head\n2. Action plan CAPA efektif (issue tidak berulang)\n3. Evidence harus terlampir (foto, data, daftar hadir dll)"}, {"n": 22, "t": "Problem yang sama tidak terulang", "r": "1. Defect mingguan tidak berulang dari report reject workcenter dan inspeksi QC (jika di atas standar ppm)"}, {"n": 23, "t": "Performance Monitoring In Process", "r": "1. Setiap area memiliki papan monitoring performance\n2. Papan performance di-update daily & weekly\n3. Pengisian papan performance lengkap"}, {"n": 24, "t": "Tidak ada permintaan sortir pada next process", "r": "Cek instruksi \"sortir next process\" pada label yang tertempel di barang."}, {"n": 25, "t": "Defect tidak ditemukan pada next process", "r": "1. Defect setiap proses produksi yang ditemukan next process tidak melebihi standar PPM\n2. Defect proses produksi tidak ditemukan di proses inspeksi QC (patrol, outgoing, full lot)"}, {"n": 26, "t": "Analisa penyebab masalah lengkap Man-Method-Machine", "r": "Analisa masalah pada NCR/CAPAR lengkap dan logis"}, {"n": 27, "t": "Tidak ada komplain external", "r": "Cek komplain  / inspeksi eksternal"}, {"n": 28, "t": "Trend quality membaik", "r": "PPM reject atau temuan inspeksi menurun / di bawah standar"}, {"n": 29, "t": "(QAFA) Barang tidak menghalangi area jalan", "r": "1. WIP/barang tidak berada di area jalan dan jalur evakuasi\n2. Tidak menghalangi/block APAR, Hydrant, dan panel listrik"}, {"n": 30, "t": "(QAFA) Barang tidak mepet tembok", "r": "Minimal 30 cm dari tembok"}, {"n": 31, "t": "(QAFA) Ventilasi/sirkulasi udara cukup", "r": "kipas menyala"}, {"n": 32, "t": "Barang dan tempatnya ada label atau tanda", "r": "1. WIP & hasil finished goods pada palet/ green bin harus ada label identitas dan area segregasi yang jelas. (Accept, hold, reject, FSC/NON FSC)\n2. Sharp tools harus ada identitas yang terdaftar di IE\n3. Wadah chemical diberi identitas yang jelas dan label hazard sesuai\n4. Wadah non- chemical/ WIP/Finished Goods diberi identitas yang jelas sesuai dengan fungsinya\n5. Material yg tersimpan di area produksi ada label yang jelas"}, {"n": 33, "t": "Alat ukur yang digunakan sesuai standar", "r": "Alat ukur ada label kalibrasi dan tidak kadarluarsa"}, {"n": 34, "t": "Hanya WIP yang akan diproses yang ada di area kerja", "r": "WIP terdaftar di RHHP"}, {"n": 35, "t": "(QAFA) Kondisi barang & tools yang digunakan baik dan disimpan dengan baik (teratur)", "r": "1. Alas WIP/Finished Goods di palet & meja kerja bersih dari debu, jejak sepatu, dan kotoran lainnya\n2. Alas WIP/Finished Goods menggunakan sisi non-print\n3. Tempat barang tidak menggunakan produk customer, tidak rusak, dan digunakan sesuai fungsinya.\n4. Barang& tools yang disimpan rapih dan sesuai dengan tempatnya.\n5. Lampu meja kerja menyala dengan optimal (tidak redup & mati)"}, {"n": 36, "t": "Tidak ada makanan dan minuman yang berwarna di area produksi", "r": ""}, {"n": 37, "t": "Barang & tools yang digunakan tidak berpotensi mengandung phtalate", "r": "Cek dengan incoming barang & tools yang digunakan sudah pass PH"}, {"n": 38, "t": "Tidak ada debu tebal, kotor, berkarat, atau sarang laba-laba", "r": "1. Mesin, WIP/Finished Goods, tools, & barang lain tidak berdebu (di-wrapping), berkarat, dan ada sarang laba-laba, wrapping\n2. Wadah, secondary contaiment, alas lantai tidak kotor"}, {"n": 39, "t": "Tidak ada resiko safety (Produksi)", "r": "1. Secondary contaiment pada benda cair\n2. Posisi palet bersandar pada barang\n3. Ada potensi karyawan tidak safety (palet bersandar, lampu meja kerja tidak terkait dengan benar, tidak memakai APD, kabel menjuntai)\n4. MSDS chemical tertempel dan menggunakan bahasa indo 26 bab/point\n4. Die block tidak pada tempatnya \n5. Safety issue pada mesin (oli bocor, pintu mesin tidak tertutup rapat, tombol &part-part mesin rusak/hilang, tidak ada getaran tak terduga, panas berlebihan)\n6. Kontaminasi issue \n7. Operator tidak boleh memakai kutek, aksesories tangan (gelang, cincin, dll)\nDLL (selain di list ini jika ada safety issue tetap temuan)"}];
+const UNITS = [{"id":"d1","short":"FG IM","name":"Finished Good IM","dept":"Logistic","cats":[{"name":"Akurasi","w":35,"from":1,"to":3},{"name":"Safety","w":15,"from":4,"to":8},{"name":"5R","w":10,"from":9,"to":14},{"name":"System","w":20,"from":15,"to":18},{"name":"Traceability","w":20,"from":19,"to":21}],"items":[{"n":1,"t":"Akurasi sampling 10 produk/stok 100% akurat","r":"Cek data dan aktual jumlah produk"},{"n":2,"t":"Akurasi sampling 5 Allowance 100% akurat(MC)","r":"Cek data dan aktual jumlah produk"},{"n":3,"t":"Locator akurat (Sampling 10)","r":"Perbandingan data lokasi dan aktual lokasi"},{"n":4,"t":"Humidity area warehouse tidak lebih dari 60","r":""},{"n":5,"t":"Barang tidak mepet tembok (Min. 30cm)","r":""},{"n":6,"t":"Barang tidak menghalangi jalan","r":""},{"n":7,"t":"Operator forklift dan Material Handler area Rak Memakai APD","r":"Helmet & Safety Shoes"},{"n":8,"t":"Semua palet dalam kondisi baik","r":"Kaki-kaki lengkap (Baik) dan tidak rusak"},{"n":9,"t":"Barang tersegregasi dengan baik antar jenis dan vendor","r":"Claim, jenis material dan vendor"},{"n":10,"t":"Barang hold dipisahkan dengan baik","r":""},{"n":11,"t":"Barang tidak bersentuhan langsung dengan lantai / palet","r":""},{"n":12,"t":"Barang terlindungi dari debu dan kotoran lain","r":"Wrapping"},{"n":13,"t":"Forklift dan handlift dalam kondisi baik/bersih dan operatornya menggunakan APD lengkap","r":""},{"n":14,"t":"Tidak ada 5R Issue","r":""},{"n":15,"t":"Papan schedule Monitoring line Mattel ( update tepat waktu )","r":""},{"n":16,"t":"Cycle count dilakukan secara berkala","r":""},{"n":17,"t":"Acuan Kerja tersedia","r":""},{"n":18,"t":"7 Point check dilakukan sesuai standard","r":"Truck"},{"n":19,"t":"Laporan transaksi material tersedia","r":"Logbook"},{"n":20,"t":"Identitas barang jelas","r":""},{"n":21,"t":"No. Lot/SPK dapat ditelusuri","r":""}]},{"id":"d2","short":"FG Packaging","name":"Finished Good Packaging","dept":"Logistic","cats":[{"name":"Akurasi","w":35,"from":1,"to":3},{"name":"Safety","w":15,"from":4,"to":8},{"name":"5R","w":10,"from":9,"to":14},{"name":"System","w":20,"from":15,"to":18},{"name":"Traceability","w":20,"from":19,"to":21}],"items":[{"n":1,"t":"Akurasi sampling 10 produk/stok 100% akurat","r":"Cek data dan aktual jumlah produk"},{"n":2,"t":"Akurasi sampling 5 Allowance 100% akurat(MC)","r":"Cek data dan aktual jumlah produk"},{"n":3,"t":"Locator akurat (Sampling 10)","r":"Perbandingan data lokasi dan aktual lokasi"},{"n":4,"t":"Humidity area warehouse tidak lebih dari 60","r":""},{"n":5,"t":"Barang tidak mepet tembok (Min. 30cm)","r":""},{"n":6,"t":"Barang tidak menghalangi jalan / potensi safety lainnya","r":""},{"n":7,"t":"Operator forklift dan Material Handler area Rak Memakai APD","r":"Helmet & Safety Shoes"},{"n":8,"t":"Semua palet dalam kondisi baik","r":"Kaki-kaki lengkap (Baik) dan tidak rusak"},{"n":9,"t":"Barang tersegregasi dengan baik antar jenis dan vendor","r":"Claim, jenis material dan vendor"},{"n":10,"t":"Barang hold dipisahkan dengan baik","r":""},{"n":11,"t":"Barang tidak bersentuhan langsung dengan lantai / palet","r":""},{"n":12,"t":"Barang terlindungi dari debu dan kotoran lain","r":"Wrapping"},{"n":13,"t":"Forklift dan handlift dalam kondisi baik/bersih dan operatornya menggunakan APD lengkap","r":""},{"n":14,"t":"Tidak ada 5R Issue","r":""},{"n":15,"t":"Papan schedule Monitoring line Mattel ( update tepat waktu )","r":""},{"n":16,"t":"Cycle count dilakukan secara berkala","r":""},{"n":17,"t":"Acuan Kerja tersedia","r":""},{"n":18,"t":"7 Point check dilakukan sesuai standard","r":"Truck"},{"n":19,"t":"Laporan transaksi material tersedia","r":"Logbook"},{"n":20,"t":"Identitas barang jelas","r":""},{"n":21,"t":"No. Lot/SPK dapat ditelusuri","r":""}]},{"id":"d3","short":"Raw Material","name":"Raw Material","dept":"Logistic","cats":[{"name":"Akurasi","w":35,"from":1,"to":2},{"name":"Safety","w":15,"from":3,"to":7},{"name":"5R","w":10,"from":8,"to":13},{"name":"System","w":20,"from":14,"to":17},{"name":"Traceability","w":20,"from":18,"to":20}],"items":[{"n":1,"t":"Akurasi sampling 5 produk/stok 100% akurat","r":"Cek data dan aktual jumlah produk"},{"n":2,"t":"Locator akurat (Sampling 5)","r":"Perbandingan data lokasi dan aktual lokasi"},{"n":3,"t":"Humidity area warehouse tidak lebih dari 60","r":""},{"n":4,"t":"Barang tidak mepet tembok (Min. 30cm)","r":""},{"n":5,"t":"Barang tidak menghalangi jalan","r":""},{"n":6,"t":"Operator forklift dan Material Handler area Rak Memakai APD","r":"Helmet & Safety Shoes"},{"n":7,"t":"Semua palet dalam kondisi baik","r":"Kaki-kaki lengkap (Baik) dan tidak rusak"},{"n":8,"t":"Barang tersegregasi dengan baik antar jenis dan vendor","r":"Claim, jenis material dan vendor"},{"n":9,"t":"Barang hold dipisahkan dengan baik","r":""},{"n":10,"t":"Barang tidak bersentuhan langsung dengan lantai","r":""},{"n":11,"t":"Barang terlindungi dari debu dan kotoran lain","r":"Wrapping"},{"n":12,"t":"Forklift dan handlift dalam kondisi baik/bersih dan operatornya menggunakan APD lengkap","r":""},{"n":13,"t":"Tidak ada 5R Issue","r":""},{"n":14,"t":"Papan schedule Monitoring line Mattel ( update tepat waktu )","r":""},{"n":15,"t":"Cycle count dilakukan secara berkala","r":""},{"n":16,"t":"Acuan Kerja tersedia","r":""},{"n":17,"t":"7 Point check dilakukan sesuai standard","r":"Truck"},{"n":18,"t":"Laporan transaksi material tersedia","r":"Logbook"},{"n":19,"t":"Identitas barang jelas","r":""},{"n":20,"t":"No. Lot/SPK dapat ditelusuri","r":""}]},{"id":"d4","short":"QC","name":"Overall QC","dept":"Quality","cats":[{"name":"Kompetensi","group":"Incoming","w":5,"from":1,"to":3},{"name":"Dokumentasi","group":"Incoming","w":6,"from":4,"to":7},{"name":"Inspeksi","group":"Incoming","w":6,"from":8,"to":11},{"name":"Performance","group":"Incoming","w":8,"from":12,"to":12},{"name":"Kompetensi","group":"Inprocess","w":7,"from":13,"to":17},{"name":"Inspeksi","group":"Inprocess","w":8,"from":18,"to":19},{"name":"Performance","group":"Inprocess","w":10,"from":20,"to":20},{"name":"Kompetensi","group":"Outgoing","w":7,"from":21,"to":25},{"name":"Inspeksi","group":"Outgoing","w":8,"from":26,"to":27},{"name":"Performance","group":"Outgoing","w":10,"from":28,"to":28},{"name":"Dokumentasi","group":"Sample","w":15,"from":29,"to":33},{"name":"Area Kerja","group":"Sample","w":10,"from":34,"to":34}],"items":[{"n":1,"t":"Inspektor menguasai acuan kerja/prosedur Incoming Inspeksi","r":"Auditor interview inspektor dan praktek pengecekan"},{"n":2,"t":"Inspektor menguasai pengendalian ketidaksesuaian material","r":"Interview Inspektor/Leader QC"},{"n":3,"t":"Inspektor menguasai metode sampling","r":"AQL yang digunakan.\n- Major/minor defect classification"},{"n":4,"t":"Pengecekan kelengkapan dokumen Sampling 5 item/material","r":"Surat jalan, COA & MSDS."},{"n":5,"t":"Pengecekan Retensi Dokumen Sampling 3 dokumen","r":"Record 5 tahun retensi"},{"n":6,"t":"Pemeriksaan berkala material dilakukan","r":"Laporan pengecekan\nJumlah expired material yang ditemukan"},{"n":7,"t":"Pengecekan Claim (Kertas)","r":"FSC/Non-FSC Claim, Surat jalan & website"},{"n":8,"t":"Identifikasi material lengkap","r":"Labeling sesuai dengan hasil inspeksi\nFSC/Non-FSC/Pass/Fail/Hold"},{"n":9,"t":"Quarantine area comply","r":"Maksimal durasi quarantine material:\n- Import: 2 bulan\n- Local: 2 minggu"},{"n":10,"t":"On time inspeksi","r":"Internal: \nMax. 24 jam dari kedatangan"},{"n":11,"t":"Inspeksi Material","r":"Compare parameter dengan hasil inspeksi (Checklist)\n- Paper\n- Tinta\n- Lem\n- Coating\n- MC\n- Supplies"},{"n":12,"t":"Customer Complaint Internal","r":"Terdata:\nComplaint Internal maximum 1 per bulan"},{"n":13,"t":"Inspektor menguasai acuan kerja/prosedur Inspeksi inprocess","r":"Auditor interview inspektor dan praktek pengecekan"},{"n":14,"t":"Inspektor menguasai pengendalian ketidaksesuaian WIP dan status proses produksinya","r":"Interview Inspektor/Leader QC"},{"n":15,"t":"Inspektor menguasai metode sampling","r":"AQL yang digunakan.\n- Major/minor defect classification"},{"n":16,"t":"Limit sample tersedia setiap ada temuan defect dalam proses","r":"Limit sample yang ditentukan oleh QC Inspector/SPV/Dept. Head"},{"n":17,"t":"Product Knowledge","r":"Interview Inspektor/Leader QC Inprocess perihal proses setiap item"},{"n":18,"t":"NCR Released dan report hold sesuai","r":"Jumlah issue, jumlah NCR yang sudah direlease sesuai dengan iAuditor/ checklist patrol"},{"n":19,"t":"Report inspeksi diisi dengan benar","r":"Pengecekan random sampling report di iAuditor\n- Penulisan tidak ada yang salah ketik (typo) \n- AQL yang digunakan sesuai\n- Kode reject dengan aktual defect sesuai"},{"n":20,"t":"Tidak ada komplain produksi/ kelolosan","r":"Terdata:\nTidak ada komplain issue printing, die cut, dan HS di produksi yang melebihi qty pengecekan\nCompare dengan FRA"},{"n":21,"t":"Inspektor menguasai acuan kerja/prosedur Inspeksi outgoing","r":"Auditor interview inspektor dan praktek pengecekan"},{"n":22,"t":"Inspektor menguasai pengendalian ketidaksesuaian lot","r":"Interview Inspektor/Leader QC"},{"n":23,"t":"Inspektor menguasai metode sampling","r":"AQL yang digunakan.\n- Major/minor defect classification"},{"n":24,"t":"Limit sample tersedia setiap ada temuan defect saat inspeksi outgoing","r":"Limit sample yang ditentukan oleh QC Inspector/SPV/Dept. Head (Untuk acuan sortir)"},{"n":25,"t":"Product Knowledge","r":"Interview Inspektor/Leader QC Outgoing perihal proses setiap item"},{"n":26,"t":"Report inspeksi diisi dengan benar","r":"Pengecekan random sampling report di iAuditor\n- Penulisan tidak ada yang salah ketik (typo) \n- AQL yang digunakan sesuai\n- Kode reject dengan aktual defect sesuai"},{"n":27,"t":"NCR Released dan report hold sesuai","r":"Jumlah issue, jumlah NCR yang sudah direlease sesuai dengan iAuditor"},{"n":28,"t":"Tidak ada Customer complaint","r":"Terdata:\nTidak ada customer complaint (data mingguan)"},{"n":29,"t":"Sample aktual terdata pada list sample","r":"Cek aktual sample dengan data list sample"},{"n":30,"t":"Sample yang tersimpan di ruang sample ter-update","r":"Cek aktual sample dengan file yang ada di PE"},{"n":31,"t":"Sample tersegerasi dengan benar","r":"Cek identitas yang ada dilemari dengan isinya"},{"n":32,"t":"Label hijau (approved sample) diisi lengkap","r":"Sampling 5 item approved sample"},{"n":33,"t":"Setiap sample ada bukti serah terima dari Engineering","r":"Sampling 5 item approved sample, cek dengan log book"},{"n":34,"t":"Ruangan sample tidak ada issue 5R dan Safety","r":"Cek 5R dan safety di ruang sample"}]},{"id":"d5","short":"PE","name":"Product Engineering","dept":"Product Engineering","cats":[{"name":"Document","w":57.142857,"from":1,"to":8},{"name":"Process","w":14.285714,"from":9,"to":10},{"name":"Area Kerja","w":14.285714,"from":11,"to":12},{"name":"Performance","w":7.142857,"from":13,"to":13},{"name":"System & Implementation","w":7.142857,"from":14,"to":14}],"items":[{"n":1,"t":"Apakah dokumen termonitor, ter-update dan tersimpan dengan rapih?","r":"a. Dokumen tersimpan dengan aman \nb. Penyimpanan dokumen tersegregasi berdasarkan kategori dokumen\nc. Pilih 3 item untuk di cek (NPOF, FMEA, Job ticket, file artwork yang dipakai yang termutakhir)"},{"n":2,"t":"Apakah ada bukti serah terima sample dari customer?","r":"Cek database/ logbook serah terima"},{"n":3,"t":"Apakah FMEA dilakukan dengan benar?","r":"a. Daftar Hadir & Laporan FMEA tersedia\nb. Perwakilan Produksi dan Quality ada pada FMEA"},{"n":4,"t":"Apakah acuan kerja tersedia dan dilakukan dengan benar?","r":"a. Acuan kerja tersedia\nb. Checklist dieblock diisi dengan benar dan lengkap\nc. Checklist pengecekan plate diisi dengan benar dan lengkap\nd. Checklist pengecekan checker diisi dengan benar dan lengkap"},{"n":5,"t":"Apakah permintaan dan penarikan plate ter-record dengan benar?","r":"Cek kelengkapan pengisian form job ticket dan form permintaan"},{"n":6,"t":"Apakah order pembuatan mylar ter-record dengan benar?","r":"Sampling 3 item dan Cek kelengkapan pengisian mylar, log book die making, dan serah terima"},{"n":7,"t":"Apakah shadeband tertata rapih dan informasi lengkap? (cek 3 shadeband)","r":"a. Tempat penyimpanan shade band rapih dan aman\nb. Ada rekapan shadeband\n- Nama Pelanggan\n- Style/Program\n- No Lot/Batch dan ukuran\n- Tanggal\n- Approval"},{"n":8,"t":"Apakah ada proses terdokumentasi yang memerlukan persetujuan klien saat mengubah bahan, komponen, desain, atau proses manufaktur?","r":"a. Daftar Hadir & Assessment ECN\nb. Assessment harus ada perwakilan Produksi & Quality\nc. Approval dari customer\nd. Terdapat bukti dan contoh perubahan"},{"n":9,"t":"Apakah produk dilakukan test HE di lab internal?","r":"Report HE (logbook pengiriman ke lab)"},{"n":10,"t":"Apakah ada proses handover produksi?","r":"Cek produk dengan jadwal PP"},{"n":11,"t":"Apakah checklist TPM, pengecekan suhu dan humidity ruang CTP dilakukan dengan rutin?","r":"Cek pengisian checklist TPM, 5R, suhu ruang, dan humidity area prepress dan CTP"},{"n":12,"t":"Apakah checklist TPM dan jadwal 5R di ruang die making dilakukan dengan rutin?","r":"Cek pengisian checklist TPM & 5R"},{"n":13,"t":"Apakah pengiriman sample ke customer berjalan sesuai rencana (tepat waktu)?","r":"Cek adherence jadwal pengiriman dalam seminggu terakhir"},{"n":14,"t":"Apakah Team PE memahami tujuan FMEA dan sasaran mutu PE?","r":"a. Pemahaman tujuan FMEA\nb. Pemahaman sasaran mutu"}]},{"id":"d6","short":"Maintenance","name":"Equipment & Maintenance","dept":"Maintenance","cats":[{"name":"Equipment & Maintenance","w":100.0,"from":1,"to":12}],"items":[{"n":1,"t":"Setiap mesin memiliki riwayat mesin yang terupdate dan terisi dengan lengkap","r":"Machine History Card"},{"n":2,"t":"Preventive Maintenance Schedule Tersedia","r":"Jadwal Maintenance"},{"n":3,"t":"Pelaksanaan Preventive Maintenance","r":"Adherence Pelaksanaan"},{"n":4,"t":"Semua tools yang dipakai maintenance tercatat dan termonitor dengan baik","r":"Akurasi daftar tools"},{"n":5,"t":"List safety stock spare part setiap mesin tersedia beserta data minimum stok","r":"Sampling akurasi stok"},{"n":6,"t":"Semua sparepart masih melebihi stok minimum","r":"Critical spare part"},{"n":7,"t":"Maintenance workshop tertata rapih","r":""},{"n":8,"t":"Tersedia APD dan digunakan dengan baik","r":"Lihat Personil meintenance yang sedang bekerja dengan menggunakan APD"},{"n":9,"t":"Kompetensi Personil maintenance","r":"Training kompetensi personil"},{"n":10,"t":"Ontime pelaksanaan order perbaikan","r":"Rekapan form order perbaikan"},{"n":11,"t":"Segregation Area","r":"Tooling, Spare part, checmical, identifikasi"},{"n":12,"t":"Visual Performance","r":"Sasaran Mutu, KPI performance maintenance terupdate di area workshop"}]},{"id":"d7","short":"IE","name":"IE","dept":"IE","cats":[{"name":"Akurasi","w":35,"from":1,"to":3},{"name":"Traceability","w":40,"from":4,"to":7},{"name":"Safety","w":25,"from":8,"to":10}],"items":[{"n":1,"t":"Total stok awal di IE harus terdata secara akurat","r":"Master list data / Inventory IE"},{"n":2,"t":"Jumlah stok sisa yang tidak dipinjam di IE sesuai dengan perhitungannya dan Identitasnya sesuai","r":"Total stok - terpakai"},{"n":3,"t":"Akurasi sampling produksi: Setiap item di area produksi (di dalam box) harus akurat dengan actualnya","r":"Visual check box"},{"n":4,"t":"Logbook peminjaman harus tercatat real-time dan jumlah yang didata harus 100% sesuai dengan actual yang dipinjamkan ke produksi","r":"Logbook serah terima peminjaman sharptools"},{"n":5,"t":"Tersedia dokumen logbook sharptools yang rusak/patah secara periodik untuk memantau frekuensi kerusakan","r":"Logbook kerusakan sharptools"},{"n":6,"t":"Adanya bukti tertulis (form) pergantian alat beserta foto kerusakan sharptools","r":"Form Requisition / Order penggantian dan foto"},{"n":7,"t":"Semua sharptools harus memiliki identitas IE","r":"Identitas IE terbaca, tidak hilang"},{"n":8,"t":"Semua sharptools dalam kondisi baik","r":"Sharptools tidak patah/rusak, berkarat"},{"n":9,"t":"Kelengkapan safety","r":"Tali pengikat tersedia (sesuai standar, tidak kependekan), tali kuat"},{"n":10,"t":"Box sharptools dalam kondisi baik, tidak rusak","r":""}]},{"id":"d8","short":"WIP PC","name":"WIP Locator","dept":"WIP Process Control","cats":[{"name":"Akurasi","w":35,"from":1,"to":3},{"name":"Safety","w":15,"from":4,"to":7},{"name":"5R Area","w":10,"from":8,"to":13},{"name":"System","w":20,"from":14,"to":15},{"name":"Traceability","w":20,"from":16,"to":17}],"items":[{"n":1,"t":"Akurasi sampling 10 produk/stok 100% akurat (Rawat & Rajin)","r":"Cek data dan aktual jumlah produk"},{"n":2,"t":"Akurasi sampling 5 Allowance 100% akurat(MC)","r":"Cek data dan aktual jumlah produk"},{"n":3,"t":"FIFO Produk (Rapi)","r":"Cek produk, penempatan wajib FIFO (Pertama masuk pertama keluar)"},{"n":4,"t":"Barang tidak mepet tembok (Rapi)","r":""},{"n":5,"t":"Barang tidak menghalangi jalan (Rapi)","r":""},{"n":6,"t":"Operator forklift dan Material Handler area Rak Memakai APD (Rajin)","r":"Helmet & Safety Shoes"},{"n":7,"t":"Semua palet dalam kondisi baik (Rawat)","r":"Kaki-kaki lengkap (Baik) dan tidak rusak"},{"n":8,"t":"Barang tersegregasi dengan baik antar jenis dan vendor (Ringkas)","r":"Claim, jenis material dan vendor"},{"n":9,"t":"Barang hold dipisahkan dengan baik (Ringkas)","r":""},{"n":10,"t":"Barang tidak bersentuhan langsung dengan lantai / palet \n(Rapi)","r":""},{"n":11,"t":"Barang terlindungi dari debu dan kotoran lain (Resik)","r":"Wrapping"},{"n":12,"t":"Forklift dan handlift dalam kondisi baik/bersih dan operatornya menggunakan APD lengkap (Resik & Rajin)","r":""},{"n":13,"t":"Kebersihan area terjaga (Rawat & Resik)","r":"Sampah, sisa"},{"n":14,"t":"Cycle count dilakukan secara berkala (Rawat & Rajin)","r":"Tracebility cycle count tersedia (setiap hari sabtu)"},{"n":15,"t":"Acuan Kerja tersedia (Rawat)","r":""},{"n":16,"t":"Laporan transaksi material tersedia (Rawat)","r":"Logbook, Form penginputan manual"},{"n":17,"t":"Identitas barang jelas (Rawat)","r":"Label lengkap dan sesuai"}]}];
+const SECS = [
+  {k:'product',name:'Product',pol:'Quality at source',w:19,from:1,to:6},
+  {k:'process',name:'Process',pol:'Quality at source',w:31,from:7,to:20},
+  {k:'system',name:'System',pol:'Quality at source',w:25,from:21,to:28},
+  {k:'area',name:'Area Kerja',pol:'5R',w:25,from:29,to:39}
+];
+const STD = 95, WARN = 85;
+const DEFAULT_AREAS = ['Sheeter', 'Printing', 'DC-HS Baoder', 'Silk Screen-Proofing', 'Varnish Offline', 'FG Depan', 'Join Manual', 'Laminating-UV', 'PH-HF', 'Sealing', 'WP', 'HF Auto', 'VF', 'IM', 'WP He Li', 'Sheeter PET', 'Line Belakang'].map((n,i)=>({id:'a'+(i+1),name:n}));
+const MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const STATUSES=['Open','Progress','Closed'];
+
+const S = {role:null,parea:null,sess:null,access:null,lrole:null,tab:'input',audits:[],dauds:[],ftype:'p',dform:null,gran:'week',dunit:'all',areas:DEFAULT_AREAS,from:'',to:'',weeks:2,preset:'all',trendArea:'all',db:null,canWrite:true,canEdit:false,
+  fstatus:'open',farea:'all',confirmDel:null,expand:{},form:null,dirty:false,loaded:false,areasCustom:false};
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today = ()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const secOf = n=>SECS.find(s=>n>=s.from&&n<=s.to);
+const fmt = v=>v==null?'–':v.toFixed(1);
+const cls = v=>v==null?'na':v>=STD?'good':v>=WARN?'warn':'bad';
+const monthLabel = ym=>{const [y,m]=ym.split('-');return MONTHS[+m-1]+' '+y};
+const dateLabel = d=>{if(!d)return '';const [y,m,dd]=d.split('-');return +dd+' '+MONTHS[+m-1].slice(0,3)+' '+y};
+const areaName = id=>(S.areas.find(a=>a.id===id)||{}).name||id;
+const UNIT=id=>UNITS.find(u=>u.id===id);
+const unitSecs=u=>u.cats.map((c,i)=>({k:'c'+i,name:(c.group?c.group+' · ':'')+c.name,pol:u.dept,w:c.w,from:c.from,to:c.to}));
+const fmtW=w=>+(+w).toFixed(1);
+const scopeName=()=>/^d/.test(S.parea||'')?(UNIT(S.parea)||{}).name:areaName(S.parea);
+
+/* ---------- scoring: M=1, DM=0, N/A excluded; section points = M/(M+DM) x weight ---------- */
+function calc(ans,SC=SECS){
+  let earned=0,wsum=0,answered=0,dm=0;
+  const secs=SC.map(s=>{
+    let m=0,d=0,na=0;
+    for(let n=s.from;n<=s.to;n++){const a=ans[n]; if(a==='M')m++; else if(a==='DM')d++; else if(a==='NA')na++;}
+    const sc=m+d, pct=sc?m/sc:null, pts=sc?pct*s.w:null;
+    if(sc){earned+=pts;wsum+=s.w}
+    answered+=m+d+na; dm+=d;
+    return {k:s.k,name:s.name,m,d,na,pct,pts,w:s.w};
+  });
+  return {secs,total:wsum?earned/wsum*100:null,answered,dm};
+}
+
+/* ---------- draft (per-viewer convenience) ---------- */
+const DKEY='audit-internal-draft-v1', DKEYD='audit-internal-draft-dept-v1';
+function newForm(){return {date:today(),areaId:'a1',auditor:'',auditee:'',ans:{},find:{},plan:{},pic:{},due:{},stat:{},photos:{}}}
+function newDForm(){return {date:today(),unitId:'d1',auditor:'',auditee:'',ans:{},find:{},photos:{}}}
+function loadDraft(k,mk){try{const r=localStorage.getItem(k);if(r){const f=JSON.parse(r);if(f&&f.ans)return Object.assign(mk(),f)}}catch(e){}return mk()}
+let dt;function saveDraft(){clearTimeout(dt);dt=setTimeout(()=>{const k=S.ftype==='d'?DKEYD:DKEY,f=S.ftype==='d'?S.dform:S.form;try{localStorage.setItem(k,JSON.stringify(f))}catch(e){try{localStorage.setItem(k,JSON.stringify(Object.assign({},f,{photos:{}})))}catch(e2){}}},300)}
+function clearDraft(ty){try{localStorage.removeItem(ty==='d'?DKEYD:DKEY)}catch(e){}}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200)}
+
+/* ---------- shell ---------- */
+const ROLE_LABEL={prod:'Produksi / Departemen',auditor:'Auditor',admin:'Admin'};
+function tabsFor(){
+  if(S.role==='prod')return /^d/.test(S.parea||'')?[['ddash','Tren Unit'],['find','Action Plan']]:[['dash','Tren Area'],['find','Action Plan']];
+  if(S.role==='auditor')return [['input','Input Audit'],['dash','Dashboard Produksi'],['ddash','Dashboard Departemen'],['find','Temuan'],['hist','Riwayat'],['set','Area']];
+  return [['dash','Dashboard Produksi'],['ddash','Dashboard Departemen'],['find','Temuan'],['input','Input Audit'],['hist','Riwayat'],['set','Area'],['acc','Akses']];
+}
+const VA=()=>S.role==='prod'?S.audits.filter(a=>a.areaId===S.parea):S.audits;
+const VAr=()=>S.role==='prod'?S.areas.filter(a=>a.id===S.parea):S.areas;
+const VD=()=>S.role==='prod'?S.dauds.filter(a=>a.unit===S.parea):S.dauds;
+const VU=()=>S.role==='prod'?UNITS.filter(u=>u.id===S.parea):UNITS;
+async function hash(role,pin){const s='audit-internal:'+role+':'+pin;try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return 'p:'+s}}
+const SKEY='audit-role-v1';
+function saveSess(){try{localStorage.setItem(SKEY,JSON.stringify(S.sess))}catch(e){}}
+function logout(auto){S.role=null;S.sess=null;S.parea=null;try{localStorage.removeItem(SKEY)}catch(e){}$('#view').dataset.built='';render();if(auto)toast('Sesi berakhir, PIN diubah admin. Masuk lagi.')}
+
+function renderTabs(){
+  $('#who').innerHTML=S.role?`<span class="pill good">${ROLE_LABEL[S.role]}${S.role==='prod'?' · '+esc(scopeName()):''}</span><button class="btn ghost sm" data-logout type="button">Keluar</button>`:'';
+  $('#tabs').innerHTML=tabsFor().map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${k==='find'?` <span class="pill ${openCount()?'bad':'na'}">${openCount()}</span>`:''}</button>`).join('');
+}
+function openCount(){let c=0;[...VA(),...VD()].forEach(a=>Object.values(a.finds||{}).forEach(f=>{if((f.status||'Open')!=='Closed')c++}));return c}
+function renderBanner(){
+  let h='';
+  if(!S.db) h='<div class="banner">Penyimpanan bersama belum tersambung. Buka halaman ini dari akun yang punya akses agar hasil audit tersimpan dan tampil di dashboard.</div>';
+  else if(S.canWrite===false) h='<div class="banner">Akses Anda hanya melihat. Minta akses Contributor untuk mengisi audit.</div>';
+  $('#banner').innerHTML=h;
+}
+function render(){
+  if(!S.role){$('#tabs').innerHTML='';$('#who').innerHTML='';renderBanner();$('#bar').innerHTML='';$('#view').dataset.built='login';$('#view').innerHTML=loginHTML();return}
+  if(!tabsFor().some(x=>x[0]===S.tab))S.tab=tabsFor()[0][0];
+  renderTabs();renderBanner();
+  const v=$('#view');
+  if(S.tab==='input'){ if(!v.dataset.built||v.dataset.built!=='input') buildForm(); $('#bar').innerHTML=barHTML(); updateScore(); return;}
+  v.dataset.built=S.tab; $('#bar').innerHTML='';
+  if(S.tab==='dash') v.innerHTML=dashHTML();
+  else if(S.tab==='ddash') v.innerHTML=ddashHTML();
+  else if(S.tab==='find') v.innerHTML=findHTML();
+  else if(S.tab==='hist') v.innerHTML=histHTML();
+  else if(S.tab==='acc') v.innerHTML=accHTML();
+  else v.innerHTML=setHTML();
+  hydrate();
+}
+
+/* ---------- FORM ---------- */
+const FM=()=>S.ftype==='d'?S.dform:S.form;
+const FUNIT=()=>UNIT(S.dform.unitId)||UNITS[0];
+const FITEMS=()=>S.ftype==='d'?FUNIT().items:ITEMS;
+const FSECS=()=>S.ftype==='d'?unitSecs(FUNIT()):SECS;
+function buildForm(){
+  const f=FM(),d=S.ftype==='d',secs=FSECS(),items=FITEMS(); $('#view').dataset.built='input';
+  let h=`<div class="seg roles" role="radiogroup" aria-label="Jenis audit" style="max-width:380px"><button type="button" role="radio" data-ftype="p" aria-checked="${!d}">Produksi</button><button type="button" role="radio" data-ftype="d" aria-checked="${d}">Departemen lain</button></div>
+  <div><h2>${d?'Form Audit Departemen':'Form Audit Proses Produksi'}</h2><p class="muted" style="margin:4px 0 0">${d?'Pilih unit':'Pilih area'}, isi ${items.length} poin. Poin DM wajib diisi keterangan temuan dan foto. Action plan diisi oleh ${d?'unit terkait':'produksi'}.</p></div>
+  <section class="card"><div class="meta">
+    <label class="f">Tanggal<input type="date" id="f-date" value="${esc(f.date)}"></label>
+    ${d?`<label class="f">Unit / departemen<select id="f-unit">${UNITS.map(u=>`<option value="${u.id}" ${u.id===f.unitId?'selected':''}>${esc(u.dept)} · ${esc(u.name)}</option>`).join('')}</select></label>`
+      :`<label class="f">Area<select id="f-area">${S.areas.map((a,i)=>`<option value="${a.id}" ${a.id===f.areaId?'selected':''}>${i+1}. ${esc(a.name)}</option>`).join('')}</select></label>`}
+    <label class="f">Auditor<input type="text" id="f-auditor" value="${esc(f.auditor)}" placeholder="mis. Pande & Putri"></label>
+    <label class="f">Auditee<input type="text" id="f-auditee" value="${esc(f.auditee)}" placeholder="mis. Bayu, Budi"></label>
+  </div>
+  <div class="legend"><span><b>M</b> = Meet, sesuai, tidak ada temuan</span><span><b>DM</b> = Does not Meet, ada temuan</span><span><b>N/A</b> = tidak berlaku, tidak dihitung</span></div></section>`;
+  secs.forEach(s=>{
+    h+=`<section class="card sec" id="sec-${s.k}"><div class="sec-h"><div><div class="pol">${esc(s.pol)}</div><h3>${esc(s.name)} <span class="muted" style="font-weight:400">· bobot ${fmtW(s.w)}</span></h3></div><div class="sc" id="sc-${s.k}"></div></div>`;
+    items.filter(i=>i.n>=s.from&&i.n<=s.to).forEach(i=>{
+      const a=f.ans[i.n]||'';
+      h+=`<div class="item" data-n="${i.n}" id="it-${i.n}">
+        <div class="item-head"><span class="num">${i.n}</span><div class="req">${esc(i.t)}</div>
+        <div class="seg" role="radiogroup" aria-label="Penilaian poin ${i.n}">${['M','DM','NA'].map(v=>`<button type="button" role="radio" data-v="${v}" aria-checked="${a===v}">${v==='NA'?'N/A':v}</button>`).join('')}</div></div>
+        ${i.r?`<details class="ref"><summary>Acuan pemeriksaan</summary><ul>${i.r.split('\n').filter(x=>x.trim()).map(x=>`<li>${esc(x.trim())}</li>`).join('')}</ul></details>`:''}
+        <div class="dm" ${a==='DM'?'':'hidden'}>
+          <label class="f">Keterangan temuan<textarea data-k="find" placeholder="Keterangan temuan: apa, di mana, kondisi aktual">${esc(f.find[i.n]||'')}</textarea></label>
+          <div class="ph"><div class="f" style="display:block">Foto bukti temuan (wajib, maks ${MAXPH})</div><div class="ph-list" data-ph="${i.n}"></div>
+            <div class="ph-btns"><label class="btn ghost sm">Ambil foto<input type="file" accept="image/*" capture="environment" hidden data-photo></label><label class="btn ghost sm">Pilih dari galeri<input type="file" accept="image/*" multiple hidden data-photo></label><span class="muted" style="font-size:12px" data-phmsg></span></div></div>
+        </div></div>`;
+    });
+    h+='</section>';
+  });
+  $('#view').innerHTML=h;
+  items.forEach(i=>renderPhotos(i.n));
+}
+function barHTML(){return `<div class="sticky-bar"><div class="sticky-in">
+  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div><div class="big mono" id="b-total">–</div><div class="muted" style="font-size:12px" id="b-prog"></div></div><div class="parts" id="b-parts"></div></div>
+  <div style="display:flex;gap:8px"><button class="btn ghost" id="btn-reset" type="button">Kosongkan</button><button class="btn" id="btn-save" type="button">Simpan hasil audit</button></div></div></div>`}
+function updateScore(){
+  if(S.tab!=='input')return;
+  const secs=FSECS(),items=FITEMS(),c=calc(FM().ans,secs);
+  const tot=$('#b-total'); if(!tot)return;
+  tot.textContent=fmt(c.total); tot.style.color=c.total==null?'':`var(--${cls(c.total)})`;
+  $('#b-prog').textContent=`${c.answered}/${items.length} terisi · ${c.dm} temuan DM · standar ${STD}`;
+  $('#b-parts').innerHTML=c.secs.map((s,i)=>`<span>${esc(secs[i].name)} <b>${fmt(s.pts)}</b>/${fmtW(s.w)}</span>`).join('');
+  c.secs.forEach((s,i)=>{const e=$('#sc-'+secs[i].k); if(e) e.textContent=s.pts==null?'belum dinilai':`${s.m} M · ${s.d} DM${s.na?` · ${s.na} N/A`:''} → ${fmt(s.pts)} / ${fmtW(s.w)}`});
+}
+function setAnswer(n,v){
+  const f=FM(); f.ans[n]=v;
+  const it=$('#it-'+n); it.classList.remove('bad-field');
+  it.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.v===v)));
+  it.querySelector('.dm').hidden = v!=='DM';
+  saveDraft(); updateScore();
+}
+const MAXPH=4;
+function renderPhotos(n){
+  const el=document.querySelector(`[data-ph="${n}"]`); if(!el)return;
+  const list=FM().photos[n]||[];
+  el.innerHTML=list.map((u,i)=>`<div class="ph-item"><img class="thumb" src="${u}" alt="Foto temuan ${n}"><button type="button" class="ph-x" data-rmph="${n}:${i}" aria-label="Hapus foto">×</button></div>`).join('')||'<span class="muted" style="font-size:12px">Belum ada foto</span>';
+}
+function compress(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{
+      let max=1280,out='';
+      for(let k=0;k<4;k++){
+        const r=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');
+        c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        for(const q of [0.72,0.55,0.4]){out=c.toDataURL('image/jpeg',q);if(out.length<230000){URL.revokeObjectURL(url);return res(out)}}
+        max=Math.round(max*0.75);
+      }
+      URL.revokeObjectURL(url);rej(new Error('too big'));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('bad image'))};
+    img.src=url;
+  });
+}
+async function addFormPhotos(input){
+  const n=+input.closest('.item').dataset.n, f=FM(), msg=input.closest('.ph').querySelector('[data-phmsg]');
+  const arr=f.photos[n]=f.photos[n]||[];
+  for(const file of [...input.files]){
+    if(arr.length>=MAXPH){msg.textContent='Maksimal '+MAXPH+' foto per temuan.';break}
+    try{msg.textContent='Memproses foto…';arr.push(await compress(file));msg.textContent=''}catch(e){msg.textContent='Foto tidak bisa diproses.'}
+  }
+  input.value='';renderPhotos(n);$('#it-'+n).classList.remove('bad-field');saveDraft();
+}
+async function saveAudit(){
+  if(S.role==='prod')return;
+  const d=S.ftype==='d',f=FM(),items=FITEMS(),secs=FSECS(),btn=$('#btn-save');
+  if(!f.date||!(d?f.unitId:f.areaId)||!f.auditor.trim()||!f.auditee.trim()){toast('Lengkapi tanggal, '+(d?'unit':'area')+', auditor, dan auditee.');window.scrollTo({top:0,behavior:'smooth'});return}
+  const miss=[];let first=null;
+  items.forEach(i=>{
+    const a=f.ans[i.n];
+    const bad=!a||(a==='DM'&&(!(f.find[i.n]||'').trim()||!(f.photos[i.n]||[]).length));
+    if(bad){miss.push(i.n); $('#it-'+i.n).classList.add('bad-field'); first=first||$('#it-'+i.n)}
+  });
+  if(miss.length){toast(`${miss.length} poin belum lengkap, DM wajib temuan dan foto (nomor ${miss.slice(0,6).join(', ')}${miss.length>6?'…':''}).`);first.scrollIntoView({behavior:'smooth',block:'center'});return}
+  if(!S.db){toast('Penyimpanan belum tersambung.');return}
+  const c=calc(f.ans,secs), finds={};
+  items.forEach(i=>{if(f.ans[i.n]==='DM')finds[i.n]={finding:f.find[i.n].trim(),plan:'',pic:'',due:'',status:'Open'}});
+  let doc,coll,id,label;
+  if(d){
+    const u=FUNIT();coll='daudits';id=f.date+'_'+u.id+'_'+Date.now().toString(36);label=u.name;
+    doc={unit:u.id,unitName:u.name,dept:u.dept,date:f.date,auditor:f.auditor.trim(),auditee:f.auditee.trim(),ans:f.ans,finds,
+      score:{total:+c.total.toFixed(2),dm:c.dm,cats:c.secs.map(s=>+(s.pts??0).toFixed(2))},createdAt:Date.now()};
+  }else{
+    coll='audits';id=f.date+'_'+f.areaId+'_'+Date.now().toString(36);label=areaName(f.areaId);
+    doc={date:f.date,areaId:f.areaId,areaName:label,auditor:f.auditor.trim(),auditee:f.auditee.trim(),ans:f.ans,finds,
+      score:{total:+c.total.toFixed(2),product:+(c.secs[0].pts??0).toFixed(2),process:+(c.secs[1].pts??0).toFixed(2),system:+(c.secs[2].pts??0).toFixed(2),area:+(c.secs[3].pts??0).toFixed(2),dm:c.dm},
+      createdAt:Date.now()};
+  }
+  btn.disabled=true;btn.textContent='Menyimpan…';
+  try{
+    let done=0;const total=Object.keys(finds).reduce((s,n)=>s+(f.photos[n]||[]).length,0);
+    for(const n of Object.keys(finds)){
+      finds[n].photos=[];
+      for(const [k,u] of (f.photos[n]||[]).entries()){
+        const pid=id+'_'+n+'_'+k;
+        btn.textContent=`Mengunggah foto ${++done}/${total}…`;
+        await S.db.doc('photos/'+pid).set({auditId:id,n:+n,data:u,createdAt:Date.now()});
+        finds[n].photos.push(pid);
+      }
+    }
+    btn.textContent='Menyimpan…';
+    await S.db.doc(coll+'/'+id).set(doc);
+    toast(`Tersimpan: ${label} · skor ${fmt(c.total)}`);
+    const keep={auditor:f.auditor,auditee:f.auditee};
+    if(d)S.dform=Object.assign(newDForm(),keep,{unitId:f.unitId});else S.form=Object.assign(newForm(),keep);
+    clearDraft(S.ftype);
+    S.from='';S.to='';S.preset='all'; S.tab=d?'ddash':'dash'; $('#view').dataset.built='';render();window.scrollTo({top:0});
+  }catch(e){
+    btn.disabled=false;btn.textContent='Simpan hasil audit';
+    toast(e&&e.code==='quota_exceeded'?'Penyimpanan penuh. Hapus audit lama di Riwayat.':'Gagal menyimpan (cek koneksi). Coba lagi.');
+  }
+}
+
+/* ---------- derived data ---------- */
+const cmp=(a,b)=>(a.date+String(1e13+(a.createdAt||0)))>(b.date+String(1e13+(b.createdAt||0)))?1:-1;
+function calcOf(a){
+  if(a.unit)return calc(a.ans||{},unitSecs(UNIT(a.unit)||UNITS[0]));
+  if(a.ans)return calc(a.ans);
+  const sc=a.score||{};
+  const secs=SECS.map(s=>{const p=Number(sc[s.k]),ok=sc[s.k]!=null&&Number.isFinite(p);return {k:s.k,m:0,d:0,na:0,pct:ok?p/s.w:null,pts:ok?p:null,w:s.w}});
+  return {secs,total:Number(sc.total),answered:0,dm:Number(sc.dm)||0,imp:true};
+}
+function withCalc(a){return Object.assign({},a,{c:calcOf(a)})}
+function latestByArea(list){const m={};list.forEach(a=>{const c=m[a.areaId];if(!c||cmp(c,a)<0)m[a.areaId]=a});return m}
+function periodAudits(){return VA().filter(a=>(!S.from||a.date>=S.from)&&(!S.to||a.date<=S.to))}
+const p2=n=>String(n).padStart(2,'0'), iso=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+function setPreset(p){
+  S.preset=p;const d=new Date();
+  if(p==='all'){S.from='';S.to=''}
+  else if(p==='4w'||p==='8w'){d.setDate(d.getDate()-(p==='4w'?27:55));S.from=iso(d);S.to=''}
+  else if(p==='month'){S.from=iso(new Date(d.getFullYear(),d.getMonth(),1));S.to=''}
+}
+function rangeLabel(){return (!S.from&&!S.to)?'semua audit':`${S.from?dateLabel(S.from):'awal'} sampai ${S.to?dateLabel(S.to):'sekarang'}`}
+function weekEnd(d){const [y,m,dd]=d.split('-').map(Number),x=new Date(y,m-1,dd);x.setDate(x.getDate()+(6-x.getDay()+7)%7);return iso(x)}
+const wlab=k=>{const [,m,d]=k.split('-');return (+d)+'-'+MONTHS[+m-1].slice(0,3)};
+function byWeek(list){const map={};list.forEach(a=>{const w=weekEnd(a.date),r=(map[w]=map[w]||{}),c=r[a.areaId];if(!c||cmp(c,a)<0)r[a.areaId]=a});return {weeks:Object.keys(map).sort(),map}}
+function wrapName(s,max){
+  const toks=[];s.split(' ').forEach(w=>{(w.length>max?w.split(/(?<=-)/):[w]).forEach((p,i)=>toks.push({t:p,g:i>0}))});
+  const lines=[];let cur='';
+  toks.forEach(k=>{const j=cur?(k.g?cur+k.t:cur+' '+k.t):k.t;if(j.length>max&&cur){lines.push(cur);cur=k.t}else cur=j});
+  if(cur)lines.push(cur);return lines.slice(0,3)}
+function dashHTML(){
+  const lat=latestByArea(periodAudits());
+  const rows=VAr().map(a=>({i:S.areas.indexOf(a),a,au:lat[a.id]?withCalc(lat[a.id]):null}));
+  const done=rows.filter(r=>r.au);
+  const avg=done.length?done.reduce((s,r)=>s+r.au.c.total,0)/done.length:null;
+  const below=done.filter(r=>r.au.c.total<STD).length;
+  const open=VA().reduce((n,a)=>n+Object.values(a.finds||{}).filter(f=>(f.status||'Open')!=='Closed').length,0);
+  const overdue=VA().reduce((n,a)=>n+Object.values(a.finds||{}).filter(f=>(f.status||'Open')!=='Closed'&&f.due&&f.due<today()).length,0);
+  if(!VA().length) return `<div class="bar-top"><h2>${S.role==='prod'?'Tren Audit · '+esc(areaName(S.parea)):'Dashboard Monitoring'}</h2></div><div class="card empty"><b>Belum ada hasil audit.</b><br>Isi form di tab Input Audit. Setelah disimpan, skor semua area, tren, dan temuan tampil di sini.</div>`;
+  let h=`<div class="bar-top"><div><h2>${S.role==='prod'?'Tren Audit · '+esc(areaName(S.parea)):'Dashboard Monitoring'}</h2><div class="muted">Rentang: ${rangeLabel()}. Skor kartu dan heatmap memakai audit terbaru tiap area. Standar ${STD}.</div></div>
+    <div class="ctrl"><label class="f">Dari<input type="date" id="d-from" value="${esc(S.from)}"></label><label class="f">Sampai<input type="date" id="d-to" value="${esc(S.to)}"></label>
+    <div class="chips" style="align-self:end;padding-bottom:2px">${[['all','Semua'],['4w','4 minggu'],['8w','8 minggu'],['month','Bulan ini']].map(([k,l])=>`<button type="button" class="btn ghost sm" data-preset="${k}" aria-pressed="${S.preset===k}">${l}</button>`).join('')}</div>
+    <label class="f">Minggu di grafik utama<select id="d-weeks">${[2,3,4,6,8].map(n=>`<option ${S.weeks===n?'selected':''}>${n}</option>`).join('')}</select></label>${S.role==='prod'?'':'<button class="btn ghost" id="btn-csv" type="button">Unduh CSV skor</button>'}</div></div>
+  <div class="kpis">
+    <div class="card kpi"><span class="lab">Rata-rata skor</span><span class="val mono" style="color:var(--${cls(avg)})">${fmt(avg)}</span><span class="sub">dari ${done.length} area teraudit</span></div>
+    <div class="card kpi"><span class="lab">Area teraudit</span><span class="val">${done.length}<span class="muted" style="font-size:22px"> / ${VAr().length}</span></span><span class="sub">${VAr().length-done.length} area belum diaudit</span></div>
+    <div class="card kpi"><span class="lab">Di bawah standar</span><span class="val" style="color:var(--${below?'bad':'good'})">${below}</span><span class="sub">area dengan skor &lt; ${STD}</span></div>
+    <div class="card kpi"><span class="lab">Temuan belum closed</span><span class="val" style="color:var(--${open?'bad':'good'})">${open}</span><span class="sub">${overdue} lewat due date</span></div>
+  </div>
+  ${chartPanels()}
+  <section class="card pnl"><div class="pnl-h"><h3>Skor per area dan komponen</h3><span class="muted" style="font-size:12px">% = capaian komponen (M ÷ M+DM). Warna: hijau ≥ ${STD}, kuning ≥ ${WARN}, merah di bawahnya.</span></div>
+  <div class="scroll"><table class="hm"><thead><tr><th>Area</th>${SECS.map(s=>`<th class="n">${s.name}</th>`).join('')}<th>Skor</th><th class="n">DM</th><th>Tgl audit</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    if(!r.au){h+=`<tr><td><b>${r.i+1}.</b> ${esc(r.a.name)}</td>${SECS.map(()=>'<td class="c na">–</td>').join('')}<td colspan="3"><span class="pill na">Belum diaudit</span></td></tr>`;return}
+    const c=r.au.c;
+    h+=`<tr><td><b>${r.i+1}.</b> ${esc(r.a.name)}<div class="muted" style="font-size:12px">${esc(r.au.auditor)}</div></td>${c.secs.map(s=>{const p=s.pct==null?null:s.pct*100;return `<td class="c ${cls(p)}">${p==null?'–':p.toFixed(0)+'%'}</td>`}).join('')}
+    <td><div class="tot"><span class="mono" style="min-width:42px">${fmt(c.total)}</span><span class="tb"><i class="${cls(c.total)}" style="width:${Math.max(0,Math.min(100,c.total))}%"></i></span></div></td>
+    <td class="n mono">${c.dm}</td><td class="muted">${dateLabel(r.au.date)}</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  const miss=rows.filter(r=>!r.au);
+  if(miss.length) h+=`<div><div class="muted" style="font-size:12px;margin-bottom:6px">Belum diaudit di periode ini</div><div class="chips">${miss.map(r=>`<span class="chip">${r.i+1}. ${esc(r.a.name)}</span>`).join('')}</div></div>`;
+  h+=`</section><div class="grid2"><section class="card pnl"><div class="pnl-h"><h3>Capaian per komponen</h3></div>${compHTML(done)}</section>
+  <section class="card pnl"><div class="pnl-h"><h3>Poin yang paling sering temuan</h3><span class="muted" style="font-size:12px">${rangeLabel()}</span></div>${topFindHTML()}</section></div>`;
+  if(S.role==='prod')h+=recentHTML();
+  return h;
+}
+function chartPanels(){
+  const prod=S.role==='prod', bw=byWeek(periodAudits()), lastW=bw.weeks[bw.weeks.length-1];
+  let h=`<section class="card pnl"><div class="pnl-h"><h3>Performance Process Audit${lastW?' · WE '+dateLabel(lastW):''}</h3><span class="muted" style="font-size:12px">${S.weeks} minggu terakhir di rentang. Angka dalam batang = poin komponen. Latar merah muda = skor terbaru di bawah ${WARN}.</span></div>
+  <div class="legend2">${SECS.map((s,i)=>`<span><i style="background:var(--c${i+1})"></i>${s.name} (${s.w})</span>`).join('')}<span><i style="background:none;border-top:2px dashed var(--warn);height:0;width:16px;vertical-align:3px"></i>Standar ${STD}</span></div>
+  <div class="scroll">${chartA()}</div></section>`;
+  h+=prod?`<section class="card pnl"><div class="pnl-h"><h3>Overall score per minggu</h3><span class="muted" style="font-size:12px">sumbu mulai dari 60</span></div>${legendBar()}<div class="scroll">${chartB()}</div></section>`
+  :`<div class="grid2"><section class="card pnl"><div class="pnl-h"><h3>Overall score per minggu</h3><label class="f" style="min-width:180px"><select id="d-trend"><option value="all">Rata-rata semua area</option>${VAr().map(a=>`<option value="${a.id}" ${S.trendArea===a.id?'selected':''}>${esc(a.name)}</option>`).join('')}</select></label></div>${legendBar()}<div class="scroll">${chartB()}</div></section>
+  <section class="card pnl"><div class="pnl-h"><h3>Skor terbaru per area</h3><span class="muted" style="font-size:12px">sumbu mulai dari 60</span></div>${legendBar()}${chartC()}</section></div>`;
+  return h;
+}
+const legendBar=()=>`<div class="legend2"><span><i style="background:var(--good-fill)"></i>Memenuhi standar</span><span><i style="background:var(--bad-fill)"></i>Di bawah standar</span><span><i style="background:none;border-top:2px dashed var(--warn);height:0;width:16px;vertical-align:3px"></i>Standar ${STD}</span></div>`;
+const WIDE_MIN=900;
+const isWide=()=>window.innerWidth>=WIDE_MIN;
+function chartA(){
+  const bw=byWeek(periodAudits()),weeks=bw.weeks.slice(-S.weeks),areas=VAr();
+  if(!weeks.length)return '<div class="empty">Belum ada audit pada rentang tanggal ini.</div>';
+  const cap=`<div class="muted" style="font-size:12px">${weeks.length>1?(isWide()?'Urutan batang per area, kiri ke kanan: ':'Urutan batang per area, atas ke bawah: ')+weeks.map(w=>'WE '+wlab(w)).join(' → ')+' (paling kanan/bawah = terbaru).':'WE '+wlab(weeks[0])}</div>`;
+  return cap+(isWide()?chartAv(bw,weeks,areas):chartAh(bw,weeks,areas));
+}
+/* Wide screens: grouped vertical bars. The whole chart is laid out on a fixed 1100-unit canvas and the SVG
+   scales to the card width (width:100%), so all areas stay visible without horizontal scrolling. */
+function chartAv(bw,weeks,areas){
+  const n=weeks.length,G=2,PAD=8,L=30,TW=1100,T=34,PB=250;
+  const gwT=(TW-L-8)/areas.length;
+  let BW=(gwT-PAD-(n-1)*G)/n,fit=true;
+  if(BW<12){BW=12;fit=false}            // many weeks selected: keep bars readable, allow scroll
+  const gw=n*BW+(n-1)*G+PAD,W=fit?TW:Math.ceil(L+areas.length*gw+8);
+  const rotTot=BW<24,rotWk=BW+G<34,Bm=rotWk?108:76,H=T+PB+Bm;
+  const y=v=>T+(100-v)/100*PB;
+  let s=`<svg viewBox="0 0 ${W} ${H}" ${fit?'style="width:100%;height:auto;display:block"':`width="${W}" height="${H}"`} role="img" aria-label="Skor audit per area dan komponen, ${weeks.length} minggu terakhir">`;
+  for(let v=0;v<=100;v+=20)s+=`<line class="grid" x1="${L}" x2="${W-8}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
+  areas.forEach((a,ai)=>{
+    const last=[...weeks].reverse().map(w=>bw.map[w][a.id]).find(Boolean);
+    if(last&&calcOf(last).total<WARN)s+=`<rect x="${L+ai*gw+1}" y="${T-(rotTot?28:16)}" width="${gw-2}" height="${PB+Bm+(rotTot?22:10)}" fill="var(--bad-bg)" opacity=".7" rx="4"/>`;
+  });
+  areas.forEach((a,ai)=>{
+    const gx=L+ai*gw;
+    weeks.forEach((w,wi)=>{
+      const x=gx+PAD/2+wi*(BW+G),cx=x+BW/2,au=bw.map[w][a.id];
+      s+=rotWk?`<text x="${cx+3}" y="${T+PB+8}" text-anchor="end" transform="rotate(-90 ${cx+3} ${T+PB+8})" style="font-size:9.5px">${wlab(w)}</text>`
+              :`<text x="${cx}" y="${T+PB+14}" text-anchor="middle" style="font-size:10px">${wlab(w)}</text>`;
+      if(!au)return;
+      const c=calcOf(au);let cum=0;
+      c.secs.forEach((sc,i)=>{const p=sc.pts||0;if(p<=0)return;const y1=y(cum+p),h=p/100*PB;
+        s+=`<rect x="${x}" y="${y1}" width="${BW}" height="${h}" fill="var(--c${i+1})"><title>${esc(a.name)} · WE ${wlab(w)} · ${SECS[i].name}: ${p.toFixed(1)} dari ${SECS[i].w}</title></rect>`;
+        if(h>=13&&BW>=16)s+=`<text class="sl" x="${cx}" y="${y1+h/2+4}" text-anchor="middle">${p.toFixed(0)}</text>`;
+        cum+=p;});
+      const tl=c.total>=99.95?'100':c.total.toFixed(1),ty=y(Math.min(100,cum))-5;
+      s+=rotTot?`<text class="tl" x="${cx+4}" y="${ty}" transform="rotate(-90 ${cx+4} ${ty})" style="fill:var(--${cls(c.total)}-ink)">${tl}</text>`
+               :`<text class="tl" x="${cx}" y="${ty}" text-anchor="middle" style="fill:var(--${cls(c.total)}-ink)">${tl}</text>`;
+    });
+    const ny=T+PB+(rotWk?56:34);
+    wrapName(a.name,Math.max(8,Math.floor(gw/6.2))).forEach((ln,li)=>{s+=`<text class="an" x="${gx+gw/2}" y="${ny+li*12}" text-anchor="middle">${esc(ln)}</text>`});
+  });
+  s+=`<line class="std" x1="${L}" x2="${W-8}" y1="${y(STD)}" y2="${y(STD)}"/></svg>`;
+  return s;
+}
+/* Narrow screens (phones/tablets portrait): one row per area with horizontal stacked bars, one bar per week. */
+function chartAh(bw,weeks,areas){
+  const n=weeks.length,W=380,L=104,R=44,T=6,B=22,BH=Math.max(7,Math.min(14,Math.floor(34/n))),rowH=n*(BH+2)+12,H=T+areas.length*rowH+B;
+  const x=v=>L+v/100*(W-L-R);
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Skor audit per area dan komponen, ${weeks.length} minggu terakhir">`;
+  for(let v=0;v<=100;v+=20)s+=`<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H-B}"/><text x="${x(v)}" y="${H-8}" text-anchor="middle">${v}</text>`;
+  areas.forEach((a,ai)=>{
+    const y0=T+ai*rowH;
+    const last=[...weeks].reverse().map(w=>bw.map[w][a.id]).find(Boolean);
+    if(last&&calcOf(last).total<WARN)s+=`<rect x="2" y="${y0+1}" width="${W-4}" height="${rowH-2}" fill="var(--bad-bg)" opacity=".7" rx="4"/>`;
+    const nm=wrapName(a.name,17),ty=y0+rowH/2-(nm.length-1)*6+3;
+    nm.forEach((ln,li)=>{s+=`<text class="an" x="${L-8}" y="${ty+li*12}" text-anchor="end">${esc(ln)}</text>`});
+    weeks.forEach((w,wi)=>{
+      const au=bw.map[w][a.id];if(!au)return;
+      const by=y0+6+wi*(BH+2),c=calcOf(au);let cum=0;
+      c.secs.forEach((sc,i)=>{const p=sc.pts||0;if(p<=0)return;const w2=p/100*(W-L-R);
+        s+=`<rect x="${x(cum)}" y="${by}" width="${w2}" height="${BH}" fill="var(--c${i+1})"><title>${esc(a.name)} · WE ${wlab(w)} · ${SECS[i].name}: ${p.toFixed(1)} dari ${SECS[i].w}</title></rect>`;
+        if(w2>=16&&BH>=11)s+=`<text class="sl" x="${x(cum)+w2/2}" y="${by+BH/2+4}" text-anchor="middle" style="font-size:10px">${p.toFixed(0)}</text>`;
+        cum+=p;});
+      s+=`<text class="tl" x="${x(Math.min(100,cum))+4}" y="${by+BH/2+4}" style="fill:var(--${cls(c.total)}-ink)">${c.total>=99.95?'100':c.total.toFixed(1)}</text>`;
+    });
+  });
+  s+=`<line class="std" x1="${x(STD)}" x2="${x(STD)}" y1="${T}" y2="${H-B}"/></svg>`;
+  return s;
+}
+let _wasWide=isWide();
+window.addEventListener('resize',()=>{const w=isWide();if(w!==_wasWide){_wasWide=w;if(S.role&&S.tab==='dash')render()}});
+function chartB(){
+  const sc=S.role==='prod'?S.parea:S.trendArea;
+  let list=periodAudits();if(sc!=='all')list=list.filter(a=>a.areaId===sc);
+  const bw=byWeek(list),pts=bw.weeks.map(w=>{const l=Object.values(bw.map[w]).map(a=>calcOf(a).total),v=l.reduce((a,b)=>a+b,0)/l.length;return {lab:wlab(w),v,tip:`WE ${wlab(w)}: ${v.toFixed(1)} (${l.length} area)`}});
+  return barSeries(pts,'Skor audit rata-rata per minggu');
+}
+function barSeries(pts,aria){
+  if(!pts.length)return '<div class="empty">Belum ada data pada rentang tanggal ini.</div>';
+  const lo=Math.min(60,Math.floor(Math.min(...pts.map(p=>p.v))/10)*10),hi=100,BW=22,G=7,L=34,T=22,PB=190,Bm=52,H=T+PB+Bm,W=L+pts.length*(BW+G)+10;
+  const y=v=>T+(hi-v)/(hi-lo)*PB;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${Math.max(W,300)}" height="${H}" role="img" aria-label="${esc(aria)}">`;
+  for(let v=lo;v<=hi;v+=10)s+=`<line class="grid" x1="${L}" x2="${W-6}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
+  pts.forEach((p,i)=>{
+    const x=L+6+i*(BW+G),k=cls(p.v)==='good'?'good':'bad';
+    s+=`<rect x="${x}" y="${y(p.v)}" width="${BW}" height="${T+PB-y(p.v)}" fill="var(--${k}-fill)" rx="2"><title>${esc(p.tip)}</title></rect>`;
+    s+=`<text x="${x+BW/2}" y="${y(p.v)-4}" text-anchor="middle" style="font-size:9.5px;fill:var(--ink)">${p.v.toFixed(1)}</text>`;
+    s+=`<text x="${x+BW/2+4}" y="${T+PB+14}" text-anchor="end" transform="rotate(-45 ${x+BW/2+4} ${T+PB+14})" style="font-size:10px">${esc(p.lab)}</text>`;
+  });
+  s+=`<line class="std" x1="${L}" x2="${W-6}" y1="${y(STD)}" y2="${y(STD)}"/></svg>`;
+  return s;
+}
+function chartC(){
+  const lat=latestByArea(periodAudits()),rows=VAr().map(a=>({a,au:lat[a.id]})).filter(r=>r.au).map(r=>{const v=calcOf(r.au).total;return {name:r.a.name,v,tip:`${r.a.name} · ${dateLabel(r.au.date)}: ${v.toFixed(1)}`}});
+  return hbars(rows,'Skor audit terbaru per area');
+}
+function hbars(rows,aria){
+  if(!rows.length)return '<div class="empty">Belum ada data pada rentang tanggal ini.</div>';
+  const lo=Math.min(60,Math.floor(Math.min(...rows.map(r=>r.v))/10)*10),RH=24,L=150,R=46,W=520,T=8,B=24,H=T+rows.length*RH+B;
+  const x=v=>L+(Math.max(lo,v)-lo)/(100-lo)*(W-L-R);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(aria)}">`;
+  for(let v=lo;v<=100;v+=10)s+=`<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H-B}"/><text x="${x(v)}" y="${H-8}" text-anchor="middle">${v}</text>`;
+  rows.forEach((r,i)=>{
+    const yy=T+i*RH+4,k=r.v>=STD?'good':'bad';
+    s+=`<text x="${L-8}" y="${yy+11}" text-anchor="end" style="fill:var(--ink)">${esc(r.name)}</text><rect x="${L}" y="${yy}" width="${Math.max(1,x(r.v)-L)}" height="15" rx="2" fill="var(--${k}-fill)"><title>${esc(r.tip)}</title></rect><text x="${x(r.v)+5}" y="${yy+11.5}" style="fill:var(--ink);font-size:10.5px">${r.v.toFixed(1)}</text>`;
+  });
+  s+=`<line class="std" x1="${x(STD)}" x2="${x(STD)}" y1="${T}" y2="${H-B}"/></svg>`;
+  return s;
+}
+function compHTML(done){
+  if(!done.length)return '<div class="empty">Belum ada data.</div>';
+  return `<div class="rows">`+SECS.map((s,i)=>{
+    const vals=done.map(r=>r.au.c.secs[i]).filter(x=>x.pct!=null);
+    const p=vals.length?vals.reduce((a,x)=>a+x.pct,0)/vals.length*100:null;
+    const worst=done.filter(r=>r.au.c.secs[i].pct!=null).sort((a,b)=>a.au.c.secs[i].pct-b.au.c.secs[i].pct)[0];
+    return `<div><div class="rrow"><div class="nm"><b>${s.name}</b> <span class="muted">bobot ${s.w}</span></div><span class="pill ${cls(p)}">${p==null?'–':p.toFixed(1)+'%'}</span></div>
+    <div class="rrow"><div class="track" style="background:var(--surface2)"><i style="width:${p||0}%;background:var(--${cls(p)}-fill)"></i></div></div>
+    ${worst&&worst.au.c.secs[i].pct<1?`<div class="muted" style="font-size:12px;margin-top:4px">Terendah: ${esc(worst.a.name)} (${(worst.au.c.secs[i].pct*100).toFixed(0)}%)</div>`:''}</div>`}).join('')+`</div>`;
+}
+function recentHTML(){
+  const l=VA().map(withCalc).sort((a,b)=>-cmp(a,b)).slice(0,8);
+  return `<section class="card pnl"><div class="pnl-h"><h3>Audit terakhir di area ini</h3></div><div class="scroll"><table><thead><tr><th>Tanggal</th><th>Auditor</th><th>Skor</th><th class="n">DM</th></tr></thead><tbody>${l.map(a=>`<tr><td>${dateLabel(a.date)}</td><td>${esc(a.auditor)}</td><td><span class="pill ${cls(a.c.total)} mono">${fmt(a.c.total)}</span></td><td class="n mono">${a.c.dm}</td></tr>`).join('')}</tbody></table></div></section>`;
+}
+function topFindHTML(){
+  const cnt={};
+  periodAudits().forEach(a=>(a.ans?Object.keys(a.ans).filter(n=>a.ans[n]==='DM'):Object.keys(a.finds||{})).forEach(n=>{(cnt[n]=cnt[n]||{c:0,areas:new Set()}).c++;cnt[n].areas.add(a.areaName||areaName(a.areaId))}));
+  const top=Object.entries(cnt).sort((a,b)=>b[1].c-a[1].c).slice(0,6);
+  if(!top.length)return '<div class="empty">Tidak ada temuan DM di periode ini.</div>';
+  const max=top[0][1].c;
+  return `<div class="rows">`+top.map(([n,o])=>{const it=ITEMS.find(i=>i.n==n);return `<div><div class="rrow"><div class="nm"><b class="mono">#${n}</b> ${esc(it?it.t:'')}</div><span class="pill bad">${o.c}×</span></div><div class="rrow"><div class="track"><i style="width:${o.c/max*100}%"></i></div></div><div class="muted" style="font-size:12px">${[...o.areas].map(esc).join(', ')}</div></div>`}).join('')+`</div>`;
+}
+
+/* ---------- DASHBOARD DEPARTEMEN ---------- */
+const periodD=()=>VD().filter(a=>(!S.from||a.date>=S.from)&&(!S.to||a.date<=S.to));
+const pKey=d=>S.gran==='month'?d.slice(0,7):weekEnd(d);
+const pLab=k=>S.gran==='month'?MONTHS[+k.slice(5,7)-1].slice(0,3)+' '+k.slice(2,4):wlab(k);
+function rangeCtrl(){return `<label class="f">Dari<input type="date" id="d-from" value="${esc(S.from)}"></label><label class="f">Sampai<input type="date" id="d-to" value="${esc(S.to)}"></label>
+  <div class="chips" style="align-self:end;padding-bottom:2px">${[['all','Semua'],['4w','4 minggu'],['8w','8 minggu'],['month','Bulan ini']].map(([k,l])=>`<button type="button" class="btn ghost sm" data-preset="${k}" aria-pressed="${S.preset===k}">${l}</button>`).join('')}</div>`}
+function ddashHTML(){
+  const units=VU(),list=periodD(),scoped=S.role==='prod';
+  const ttl=scoped?'Tren Audit · '+esc((UNIT(S.parea)||{}).name):'Dashboard Semua Departemen';
+  const head=`<div class="bar-top"><div><h2>${ttl}</h2><div class="muted">Rentang: ${rangeLabel()}. Skor memakai audit terbaru tiap unit pada periode. Standar ${STD}.</div></div>
+    <div class="ctrl">${rangeCtrl()}<label class="f">Kolom heatmap<select id="dd-gran"><option value="week" ${S.gran==='week'?'selected':''}>Mingguan</option><option value="month" ${S.gran==='month'?'selected':''}>Bulanan</option></select></label>${scoped?'':'<button class="btn ghost" id="btn-csv-d" type="button">Unduh CSV skor</button>'}</div></div>`;
+  if(!VD().length)return head+`<div class="card empty"><b>Belum ada hasil audit departemen.</b><br>Isi form di tab Input Audit, lalu pilih Departemen lain.</div>`;
+  const lat={};list.forEach(a=>{const c=lat[a.unit];if(!c||cmp(c,a)<0)lat[a.unit]=a});
+  const rows=units.map(u=>({u,au:lat[u.id]?withCalc(lat[u.id]):null}));
+  const done=rows.filter(r=>r.au),avg=done.length?done.reduce((s,r)=>s+r.au.c.total,0)/done.length:null;
+  const below=done.filter(r=>r.au.c.total<STD).length;
+  const fl=VD().flatMap(a=>Object.values(a.finds||{})).filter(f=>(f.status||'Open')!=='Closed');
+  const overdue=fl.filter(f=>f.due&&f.due<today()).length;
+  let h=head+`<div class="kpis">
+    <div class="card kpi"><span class="lab">Rata-rata skor</span><span class="val mono" style="color:var(--${cls(avg)})">${fmt(avg)}</span><span class="sub">dari ${done.length} unit teraudit</span></div>
+    <div class="card kpi"><span class="lab">Unit teraudit</span><span class="val">${done.length}<span class="muted" style="font-size:22px"> / ${units.length}</span></span><span class="sub">${units.length-done.length} unit belum diaudit</span></div>
+    <div class="card kpi"><span class="lab">Di bawah standar</span><span class="val" style="color:var(--${below?'bad':'good'})">${below}</span><span class="sub">unit dengan skor &lt; ${STD}</span></div>
+    <div class="card kpi"><span class="lab">Temuan belum closed</span><span class="val" style="color:var(--${fl.length?'bad':'good'})">${fl.length}</span><span class="sub">${overdue} lewat due date</span></div></div>`;
+  const keys=[...new Set(list.map(a=>pKey(a.date)))].sort().slice(-12);
+  const cell={};list.forEach(a=>{const k=pKey(a.date);if(!keys.includes(k))return;const m=(cell[a.unit]=cell[a.unit]||{}),c=m[k];if(!c||cmp(c,a)<0)m[k]=a});
+  const hv=rows.map(r=>{const vs=keys.map(k=>cell[r.u.id]&&cell[r.u.id][k]?calcOf(cell[r.u.id][k]).total:null),f=vs.filter(x=>x!=null);return {u:r.u,vs,avg:f.length?f.reduce((a,b)=>a+b,0)/f.length:null}});
+  h+=`<section class="card pnl"><div class="pnl-h"><h3>Heatmap skor per unit</h3><span class="muted" style="font-size:12px">${keys.length?(S.gran==='month'?'per bulan':'per minggu, label = tanggal akhir minggu (Sabtu)')+', maks. 12 periode terakhir':''}. Hijau ≥ ${STD}, kuning ≥ ${WARN}, merah di bawahnya.</span></div>`;
+  if(!keys.length)h+='<div class="empty">Tidak ada audit pada rentang tanggal ini.</div>';
+  else{
+    h+=`<div class="scroll"><table class="hm"><thead><tr><th class="stick">Unit</th>${keys.map(k=>`<th class="n">${pLab(k)}</th>`).join('')}<th class="n">Rata-rata</th></tr></thead><tbody>`;
+    hv.forEach(r=>{h+=`<tr><td class="stick"><b>${esc(r.u.short)}</b><div class="muted" style="font-size:12px">${esc(r.u.dept)}</div></td>${r.vs.map((v,i)=>`<td class="c ${cls(v)}" ${v==null?'':`title="${esc(r.u.name)} · ${pLab(keys[i])}: ${v.toFixed(2)}"`}>${v==null?'–':v.toFixed(1)}</td>`).join('')}<td class="c ${cls(r.avg)}"><b>${r.avg==null?'–':r.avg.toFixed(1)}</b></td></tr>`});
+    if(hv.length>1){const cav=keys.map((k,i)=>{const f=hv.map(r=>r.vs[i]).filter(x=>x!=null);return f.length?f.reduce((a,b)=>a+b,0)/f.length:null});const all=cav.filter(x=>x!=null);const ov=all.length?all.reduce((a,b)=>a+b,0)/all.length:null;
+      h+=`<tr><td class="stick"><b>Rata-rata semua unit</b></td>${cav.map(v=>`<td class="c ${cls(v)}"><b>${v==null?'–':v.toFixed(1)}</b></td>`).join('')}<td class="c ${cls(ov)}"><b>${ov==null?'–':ov.toFixed(1)}</b></td></tr>`}
+    h+='</tbody></table></div>';
+  }
+  h+='</section>';
+  h+=`<section class="card pnl"><div class="pnl-h"><h3>Capaian kategori, audit terbaru</h3><span class="muted" style="font-size:12px">% = M ÷ (M + DM) pada kategori itu</span></div><div class="scroll"><table><thead><tr><th>Unit</th><th>Skor</th><th>Rincian kategori</th><th class="n">DM</th><th>Tgl audit</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    if(!r.au){h+=`<tr><td><b>${esc(r.u.short)}</b><div class="muted" style="font-size:12px">${esc(r.u.dept)}</div></td><td colspan="4"><span class="pill na">Belum diaudit</span></td></tr>`;return}
+    const c=r.au.c;
+    h+=`<tr><td><b>${esc(r.u.short)}</b><div class="muted" style="font-size:12px">${esc(r.u.dept)}</div></td><td><span class="pill ${cls(c.total)} mono">${fmt(c.total)}</span></td>
+      <td><div class="catpills">${c.secs.map(s=>{const p=s.pct==null?null:s.pct*100;return `<span class="pill ${cls(p)}" title="${s.m} M, ${s.d} DM${s.na?', '+s.na+' N/A':''} · bobot ${fmtW(s.w)}">${esc(s.name)} ${p==null?'–':p.toFixed(0)+'%'}</span>`}).join('')}</div></td>
+      <td class="n mono">${c.dm}</td><td class="muted">${dateLabel(r.au.date)}</td></tr>`;
+  });
+  h+=`</tbody></table></div></section>`;
+  // trend + latest
+  const sel=scoped?S.parea:S.dunit;let tl=list;if(sel!=='all')tl=tl.filter(a=>a.unit===sel);
+  const map={};tl.forEach(a=>{const k=pKey(a.date),r=(map[k]=map[k]||{}),c=r[a.unit];if(!c||cmp(c,a)<0)r[a.unit]=a});
+  const pts=Object.keys(map).sort().slice(-24).map(k=>{const l=Object.values(map[k]).map(a=>calcOf(a).total),v=l.reduce((a,b)=>a+b,0)/l.length;return {lab:pLab(k),v,tip:`${pLab(k)}: ${v.toFixed(1)} (${l.length} unit)`}});
+  h+=`<div class="${scoped?'':'grid2'}"><section class="card pnl"><div class="pnl-h"><h3>Skor per ${S.gran==='month'?'bulan':'minggu'}</h3>${scoped?'':`<label class="f" style="min-width:200px"><select id="dd-unit"><option value="all">Rata-rata semua unit</option>${UNITS.map(u=>`<option value="${u.id}" ${S.dunit===u.id?'selected':''}>${esc(u.short)}</option>`).join('')}</select></label>`}</div>${legendBar()}<div class="scroll">${barSeries(pts,'Skor audit departemen per periode')}</div></section>
+  ${scoped?'':`<section class="card pnl"><div class="pnl-h"><h3>Skor terbaru per unit</h3><span class="muted" style="font-size:12px">sumbu mulai dari 60</span></div>${legendBar()}${hbars(done.map(r=>({name:r.u.short,v:r.au.c.total,tip:`${r.u.name} · ${dateLabel(r.au.date)}: ${r.au.c.total.toFixed(1)}`})),'Skor audit terbaru per unit')}</section>`}</div>`;
+  // top DM
+  const cnt={};list.forEach(a=>{Object.keys(a.ans||{}).filter(n=>a.ans[n]==='DM').forEach(n=>{const k=a.unit+':'+n;(cnt[k]=cnt[k]||{c:0,u:UNIT(a.unit),n:+n}).c++})});
+  const top=Object.values(cnt).sort((a,b)=>b.c-a.c).slice(0,8),mx=top.length?top[0].c:1;
+  h+=`<section class="card pnl"><div class="pnl-h"><h3>Poin yang paling sering temuan</h3><span class="muted" style="font-size:12px">${rangeLabel()}</span></div>${top.length?`<div class="rows">${top.map(o=>{const it=o.u.items.find(i=>i.n===o.n);return `<div><div class="rrow"><div class="nm"><b>${esc(o.u.short)}</b> <span class="mono muted">#${o.n}</span> ${esc(it?it.t:'')}</div><span class="pill bad">${o.c}×</span></div><div class="rrow"><div class="track"><i style="width:${o.c/mx*100}%"></i></div></div></div>`}).join('')}</div>`:'<div class="empty">Tidak ada temuan DM pada rentang ini.</div>'}</section>`;
+  return h;
+}
+/* ---------- photos display ---------- */
+S.pc={};
+function strip(ids){return (ids&&ids.length)?`<div class="ph-list">${ids.map(p=>`<img class="thumb" data-pid="${esc(p)}" alt="Foto bukti temuan">`).join('')}</div>`:''}
+function hydrate(){
+  document.querySelectorAll('img[data-pid]').forEach(async im=>{
+    const p=im.dataset.pid;
+    if(S.pc[p]){im.src=S.pc[p];return}
+    if(!S.db||im.dataset.l)return; im.dataset.l=1;
+    try{const s=await S.db.doc('photos/'+p).get();if(s.exists){S.pc[p]=s.data().data;im.src=S.pc[p]}}catch(e){}
+  });
+}
+function lightbox(src){const d=document.createElement('div');d.className='lb';d.innerHTML=`<img src="${src}" alt="Foto bukti">`;d.onclick=()=>d.remove();document.body.appendChild(d)}
+async function addFindingPhotos(card,input,key){
+  const aid=card.dataset.aid,n=card.dataset.n,src=card.dataset.src,coll=src==='d'?'daudits':'audits',a=(src==='d'?S.dauds:S.audits).find(x=>x.id===aid);if(!a||!S.db)return;
+  let ids=((a.finds||{})[n]||{})[key]||[];
+  for(const file of [...input.files]){
+    if(ids.length>=8){toast('Maksimal 8 foto per temuan.');break}
+    try{
+      toast('Mengunggah foto…');
+      const u=await compress(file),pid=aid+'_'+n+'_'+Date.now().toString(36);
+      await S.db.doc('photos/'+pid).set({auditId:aid,n:+n,kind:key,data:u,createdAt:Date.now()});S.pc[pid]=u;
+      ids=[...ids,pid];await S.db.doc(coll+'/'+aid).update({finds:{[n]:{[key]:ids}}});toast('Foto tersimpan');
+    }catch(e){toast('Foto gagal diunggah.')}
+  }
+  input.value='';
+}
+
+/* ---------- TEMUAN ---------- */
+function allFindings(){
+  const out=[];
+  VA().forEach(a=>Object.entries(a.finds||{}).forEach(([n,f])=>{const it=ITEMS.find(i=>i.n===+n);out.push({src:'p',aid:a.id,n:+n,t:it?it.t:'',area:a.areaName||areaName(a.areaId),areaId:a.areaId,date:a.date,f})}));
+  VD().forEach(a=>{const u=UNIT(a.unit)||{items:[],name:''};Object.entries(a.finds||{}).forEach(([n,f])=>{const it=u.items.find(i=>i.n===+n);out.push({src:'d',aid:a.id,n:+n,t:it?it.t:'',area:a.unitName||u.name,areaId:a.unit,date:a.date,f})})});
+  return out.sort((x,y)=>(x.f.due||'9999').localeCompare(y.f.due||'9999'));
+}
+function findAreaOpts(){
+  const o=[];
+  if(S.role==='prod'){if(/^d/.test(S.parea||''))VU().forEach(u=>o.push([u.id,u.name]));else VAr().forEach(a=>o.push([a.id,a.name]))}
+  else{VAr().forEach(a=>o.push([a.id,a.name]));UNITS.forEach(u=>o.push([u.id,u.dept+' · '+u.name]))}
+  return o.map(([v,l])=>`<option value="${v}" ${S.farea===v?'selected':''}>${esc(l)}</option>`).join('');
+}
+function findHTML(){
+  let list=allFindings();
+  const t=today();
+  if(S.fstatus==='open')list=list.filter(x=>(x.f.status||'Open')!=='Closed');
+  else if(S.fstatus==='overdue')list=list.filter(x=>(x.f.status||'Open')!=='Closed'&&x.f.due&&x.f.due<t);
+  else if(S.fstatus==='closed')list=list.filter(x=>x.f.status==='Closed');
+  if(S.farea!=='all')list=list.filter(x=>x.areaId===S.farea);
+  let h=`<div><h2>${S.role==='prod'?'Action Plan · '+esc(scopeName()):'Tindak Lanjut Temuan'}</h2><p class="muted" style="margin:4px 0 0">Isi action plan, PIC, dan due date. Untuk Closed, unggah foto bukti action plan lebih dulu. Skor audit tidak berubah.</p></div>
+  <div class="filters"><label class="f">Status<select id="f-status">${[['open','Belum closed'],['overdue','Lewat due date'],['closed','Closed'],['all','Semua']].map(([v,l])=>`<option value="${v}" ${S.fstatus===v?'selected':''}>${l}</option>`).join('')}</select></label>
+  <label class="f">Area / unit<select id="f-farea"><option value="all">Semua</option>${findAreaOpts()}</select></label>
+  ${S.role==='prod'?'':'<button class="btn ghost" id="btn-csv-find" type="button">Unduh CSV temuan</button>'}</div>`;
+  if(!list.length)return h+'<div class="card empty">Tidak ada temuan pada filter ini.</div>';
+  const dis=S.canWrite===false?'disabled':'';
+  const addBtns=k=>S.canWrite===false?'':`<div class="ph-btns" style="margin-top:6px"><label class="btn ghost sm">Ambil foto<input type="file" accept="image/*" capture="environment" hidden data-addphoto="${k}"></label><label class="btn ghost sm">Dari galeri<input type="file" accept="image/*" multiple hidden data-addphoto="${k}"></label></div>`;
+  const none=m=>`<span class="muted" style="font-size:12px">${m}</span>`;
+  h+=list.map(x=>{
+    const st=x.f.status||'Open', od=st!=='Closed'&&x.f.due&&x.f.due<t;
+    return `<article class="card fcard" data-aid="${esc(x.aid)}" data-src="${x.src}" data-n="${x.n}">
+      <div class="hd"><b>${esc(x.area)}</b><span class="mono muted">#${x.n}</span><span class="muted">${dateLabel(x.date)}</span><span class="pill ${st==='Closed'?'good':od?'bad':st==='Progress'?'warn':'na'}">${od?'Lewat due date':st}</span>${x.f.closedAt&&st==='Closed'?`<span class="muted" style="font-size:12px">closed ${dateLabel(x.f.closedAt)}</span>`:''}</div>
+      <div class="muted">${esc(x.t)}</div>
+      <div class="find">${esc(x.f.finding)}</div>
+      <div><div class="f" style="display:block;margin-bottom:6px">Foto temuan</div>${strip(x.f.photos)||none('Tidak ada foto')}${S.role==='prod'?'':addBtns('photos')}</div>
+      <label class="f">Action plan<textarea data-fk="plan" ${S.canWrite===false?'disabled':''}>${esc(x.f.plan||'')}</textarea></label>
+      <div class="fgrid"><label class="f">PIC<input type="text" data-fk="pic" value="${esc(x.f.pic||'')}" ${S.canWrite===false?'disabled':''}></label>
+      <label class="f">Due date<input type="date" data-fk="due" value="${esc(x.f.due||'')}" ${S.canWrite===false?'disabled':''}></label>
+      <label class="f">Status<select data-fk="status" ${S.canWrite===false?'disabled':''}>${STATUSES.map(s=>`<option ${st===s?'selected':''}>${s}</option>`).join('')}</select></label></div>
+      <div><div class="f" style="display:block;margin-bottom:6px">Bukti action plan (wajib sebelum Closed)</div>${strip(x.f.donePhotos)||none('Belum ada bukti')}${addBtns('donePhotos')}</div></article>`}).join('');
+  return h;
+}
+async function updateFinding(aid,n,patch,src){
+  if(!S.db)return;
+  try{await S.db.doc((src==='d'?'daudits/':'audits/')+aid).update({finds:{[n]:patch}});toast('Tersimpan')}catch(e){toast('Gagal menyimpan perubahan.')}
+}
+
+/* ---------- RIWAYAT ---------- */
+function histHTML(){
+  const list=[...S.audits,...S.dauds].map(withCalc).sort((a,b)=>-cmp(a,b));
+  if(!list.length)return '<h2>Riwayat Audit</h2><div class="card empty">Belum ada audit tersimpan.</div>';
+  let h=`<div><h2>Riwayat Audit</h2><p class="muted" style="margin:4px 0 0">${list.length} audit tersimpan.</p></div><section class="card pnl"><div class="scroll"><table><thead><tr><th>Tanggal</th><th>Area</th><th>Auditor</th><th>Auditee</th><th>Skor</th><th class="n">DM</th><th></th></tr></thead><tbody>`;
+  list.forEach(a=>{
+    const open=S.expand[a.id];
+    h+=`<tr><td>${dateLabel(a.date)}</td><td><b>${esc(a.unit?(a.dept+' · '+(a.unitName||(UNIT(a.unit)||{}).name)):(a.areaName||areaName(a.areaId)))}</b></td><td>${esc(a.auditor)}</td><td>${esc(a.auditee)}</td><td><span class="pill ${cls(a.c.total)} mono">${fmt(a.c.total)}</span></td><td class="n mono">${a.c.dm}</td>
+    <td style="white-space:nowrap"><button class="btn ghost sm" data-exp="${esc(a.id)}">${open?'Tutup':'Detail'}</button> ${S.canWrite===false||S.role!=='admin'||a.imported?'':S.confirmDel===a.id?`<button class="btn danger sm" data-del="${esc(a.id)}">Yakin hapus?</button>`:`<button class="btn ghost sm" data-del="${esc(a.id)}">Hapus</button>`}</td></tr>`;
+    if(open){
+      h+=`<tr><td colspan="7"><div class="hist-detail"><div class="parts">${a.c.secs.map((s,i)=>`<span>${esc(s.name||(SECS[i]||{}).name||'')} <b>${fmt(s.pts)}</b>/${fmtW(s.w)} ${a.ans?` (${s.m} M, ${s.d} DM, ${s.na} N/A)`:''}</span>`).join('')}</div>`+
+      (Object.keys(a.finds||{}).length?Object.entries(a.finds).map(([n,f])=>{const it=a.unit?(UNIT(a.unit)||{items:[]}).items.find(i=>i.n==n):ITEMS.find(i=>i.n==n);return `<div><b class="mono">#${n}</b> ${esc(it?it.t:'')}<div class="find" style="background:var(--bad-bg);padding:6px 10px;border-radius:6px;margin-top:3px">${esc(f.finding)}</div>${strip(f.photos)}</div>`}).join(''):'<div class="muted">Tidak ada temuan.</div>')+`</div></td></tr>`;
+    }
+  });
+  return h+'</tbody></table></div></section>';
+}
+
+/* ---------- LOGIN & AKSES ---------- */
+function loginHTML(){
+  const a=S.access,setup=!a||!a.admin;
+  const sel=setup?'admin':(S.lrole||'prod');
+  return `<div style="text-align:center;padding-top:6px"><h2>Audit Internal</h2></div><section class="card login">
+    <p class="muted" style="margin:0">${setup?'Belum ada PIN. Pilih Admin dan buat PIN admin. Lakukan ini lebih dulu sebelum link dibagikan ke tim.':'Pilih peran, lalu masukkan PIN.'}</p>
+    <div class="seg roles" role="radiogroup" aria-label="Peran">${['prod','auditor','admin'].map(r=>`<button type="button" role="radio" data-lrole="${r}" aria-checked="${sel===r}" ${setup&&r!=='admin'?'disabled':''}>${ROLE_LABEL[r]}</button>`).join('')}</div>
+    ${sel==='prod'?`<label class="f">Area atau unit Anda<select id="l-area"><optgroup label="Produksi">${S.areas.map((x,i)=>`<option value="${x.id}">${i+1}. ${esc(x.name)}</option>`).join('')}</optgroup><optgroup label="Departemen lain">${UNITS.map(u=>`<option value="${u.id}">${esc(u.dept)} · ${esc(u.name)}</option>`).join('')}</optgroup></select></label>`:''}
+    <label class="f">${setup?'Buat PIN admin (min. 4 karakter)':'PIN'}<input type="password" id="l-pin" autocomplete="off"></label>
+    <div id="l-msg" class="muted" style="min-height:18px"></div>
+    <button class="btn" id="btn-login" type="button">${setup?'Buat PIN dan masuk':'Masuk'}</button>
+    <div class="muted" style="font-size:12px">Produksi / Departemen: lihat tren dan isi action plan area atau unit sendiri. Auditor: isi form dan lihat semua. Admin: semua fitur dan pengaturan akses.</div></section>`;
+}
+async function doLogin(){
+  const msg=$('#l-msg'),pin=$('#l-pin').value,a=S.access||{},setup=!a.admin,role=setup?'admin':(S.lrole||'prod');
+  if(!pin){msg.textContent='Isi PIN.';return}
+  if(!S.db){msg.textContent='Penyimpanan belum tersambung. Muat ulang halaman.';return}
+  const h=await hash(role,pin);
+  if(setup){
+    if(pin.length<4){msg.textContent='PIN minimal 4 karakter.';return}
+    try{await S.db.doc('config/access').set({admin:h});S.access={admin:h}}catch(e){msg.textContent='Gagal menyimpan PIN.';return}
+  }else if(a[role]!==h){msg.textContent=a[role]?'PIN salah.':'PIN untuk peran ini belum diatur oleh admin.';return}
+  S.role=role;S.parea=role==='prod'?$('#l-area').value:null;S.sess={role,area:S.parea,h};saveSess();
+  S.tab=role==='auditor'?'input':'dash';$('#view').dataset.built='';render();window.scrollTo({top:0});
+}
+function accHTML(){
+  const a=S.access||{};
+  return `<div><h2>Akses dan PIN</h2><p class="muted" style="margin:4px 0 0">Kosongkan kolom yang tidak ingin diubah. Anggota tim mengganti peran hanya dengan PIN ini. Ini pembatas akses di aplikasi, bukan pengganti pengaturan Share. Bagikan link hanya ke orang di lingkungan kerja.</p></div>
+  <section class="card pnl"><div class="meta" style="padding:0">${[['prod','Produksi'],['auditor','Auditor'],['admin','Admin']].map(([r,l])=>`<label class="f">PIN ${l} ${a[r]?'<span class="pill good">sudah diatur</span>':'<span class="pill bad">belum diatur</span>'}<input type="password" id="acc-${r}" autocomplete="off" placeholder="PIN baru"></label>`).join('')}</div>
+  <div><button class="btn" id="btn-acc" type="button">Simpan PIN</button></div></section>`;
+}
+/* ---------- AREA SETTINGS ---------- */
+function setHTML(){
+  return `<div><h2>Daftar Area</h2><p class="muted" style="margin:4px 0 0">Sesuaikan nama area dengan area produksi sebenarnya. Perubahan nama berlaku untuk form dan dashboard, audit lama tetap tersimpan.</p></div>
+  <section class="card pnl"><div class="meta" style="padding:0">${S.areas.map((a,i)=>`<label class="f">Area ${i+1}<input type="text" data-area="${a.id}" value="${esc(a.name)}" ${S.canWrite===false?'disabled':''}></label>`).join('')}</div>
+  <div><button class="btn" id="btn-areas" type="button" ${S.canWrite===false?'disabled':''}>Simpan nama area</button></div></section>`;
+}
+
+/* ---------- CSV ---------- */
+async function saveCSV(name,rows){
+  const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v??'');return /[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(',')).join('\n');
+  try{const d=await claude.use('downloads');if(!d){toast('Unduhan tidak tersedia di tampilan ini.');return}await d.save({filename:name,data:csv})}catch(e){if(!e||e.code!=='declined')toast('Unduhan gagal.')}
+}
+function csvScores(){
+  const rows=[['Tanggal','Area','Auditor','Auditee','Product (19)','Process (31)','System (25)','Area Kerja (25)','Skor total','Jumlah DM']];
+  S.audits.map(withCalc).sort(cmp).forEach(a=>rows.push([a.date,a.areaName||areaName(a.areaId),a.auditor,a.auditee,...a.c.secs.map(s=>s.pts==null?'':s.pts.toFixed(2)),a.c.total.toFixed(2),a.c.dm]));
+  return rows;
+}
+function csvDept(){
+  const rows=[['Tanggal','Departemen','Unit','Auditor','Auditee','Skor total','Jumlah DM']];
+  S.dauds.slice().sort(cmp).forEach(a=>{const c=calcOf(a);rows.push([a.date,a.dept,a.unitName||(UNIT(a.unit)||{}).name,a.auditor,a.auditee,c.total.toFixed(2),c.dm])});
+  return rows;
+}
+function csvFinds(){
+  const rows=[['Tanggal','Area','No','Poin audit','Temuan','Action plan','PIC','Due date','Status','Jumlah foto temuan','Jumlah bukti action plan','Tanggal closed']];
+  allFindings().forEach(x=>{rows.push([x.date,x.area,x.n,x.t,x.f.finding,x.f.plan||'',x.f.pic||'',x.f.due||'',x.f.status||'Open',(x.f.photos||[]).length,(x.f.donePhotos||[]).length,x.f.closedAt||''])});
+  return rows;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',async e=>{
+  const lr=e.target.closest('[data-lrole]');if(lr&&!lr.disabled){S.lrole=lr.dataset.lrole;render();return}
+  if(e.target.closest('[data-logout]')){logout();return}
+  if(e.target.id==='btn-login'){doLogin();return}
+  if(e.target.id==='btn-acc'){
+    if(S.role!=='admin')return;const upd={};
+    for(const r of ['prod','auditor','admin']){const v=document.getElementById('acc-'+r).value;if(v){if(v.length<4){toast('PIN minimal 4 karakter.');return}upd[r]=await hash(r,v)}}
+    if(!Object.keys(upd).length){toast('Belum ada PIN yang diisi.');return}
+    try{await S.db.doc('config/access').set(Object.assign({},S.access||{},upd));if(upd.admin){S.sess.h=upd.admin;saveSess()}toast('PIN tersimpan');['prod','auditor','admin'].forEach(r=>document.getElementById('acc-'+r).value='')}catch(err){toast('Gagal menyimpan PIN.')}
+    return;
+  }
+  if(e.target.classList&&e.target.classList.contains('thumb')&&e.target.src){lightbox(e.target.src);return}
+  const t=e.target.closest('button'); if(!t)return;
+  if(t.dataset.tab){S.tab=t.dataset.tab;render();window.scrollTo({top:0});return}
+  if(t.dataset.preset){setPreset(t.dataset.preset);render();return}
+  if(t.dataset.ftype){S.ftype=t.dataset.ftype;if(S.ftype==='d'&&!S.dform)S.dform=loadDraft(DKEYD,newDForm);$('#view').dataset.built='';render();return}
+  if(t.closest('.seg')&&t.dataset.v){setAnswer(+t.closest('.item').dataset.n,t.dataset.v);return}
+  if(t.id==='btn-save')return saveAudit();
+  if(t.id==='btn-reset'){const f=FM(),keep={auditor:f.auditor,auditee:f.auditee};if(S.ftype==='d')S.dform=Object.assign(newDForm(),keep,{unitId:f.unitId});else S.form=Object.assign(newForm(),keep);clearDraft(S.ftype);$('#view').dataset.built='';render();toast('Form dikosongkan');return}
+  if(t.id==='btn-csv-d')return saveCSV('skor-audit-departemen.csv',csvDept());
+  if(t.id==='btn-csv')return saveCSV('skor-audit-internal.csv',csvScores());
+  if(t.id==='btn-csv-find')return saveCSV('temuan-audit-internal.csv',csvFinds());
+  if(t.dataset.rmph){const [n,i]=t.dataset.rmph.split(':');FM().photos[n].splice(+i,1);renderPhotos(n);saveDraft();return}
+  if(t.dataset.exp){S.expand[t.dataset.exp]=!S.expand[t.dataset.exp];render();return}
+  if(t.dataset.del){
+    if(S.role!=='admin'){toast('Hanya admin yang bisa menghapus audit.');return}
+    if(S.confirmDel!==t.dataset.del){S.confirmDel=t.dataset.del;render();return}
+    S.confirmDel=null;try{const isD=S.dauds.some(x=>x.id===t.dataset.del),a=(isD?S.dauds:S.audits).find(x=>x.id===t.dataset.del);for(const f of Object.values((a&&a.finds)||{}))for(const p of [...(f.photos||[]),...(f.donePhotos||[])])await S.db.doc('photos/'+p).delete();await S.db.doc((isD?'daudits/':'audits/')+t.dataset.del).delete();toast('Audit dihapus')}catch(err){toast('Gagal menghapus.')}return;
+  }
+  if(t.id==='btn-areas'){
+    const list=S.areas.map(a=>{const el=document.querySelector(`[data-area="${a.id}"]`);return {id:a.id,name:(el.value.trim()||a.name)}});
+    try{await S.db.doc('config/areas').set({list});toast('Nama area tersimpan')}catch(err){toast('Gagal menyimpan nama area.')}
+  }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='l-pin')doLogin()});
+document.addEventListener('input',e=>{
+  const t=e.target,f=FM();
+  if(S.tab!=='input')return;
+  if(t.id==='f-auditor')f.auditor=t.value; else if(t.id==='f-auditee')f.auditee=t.value;
+  else if(t.dataset.k==='find'){f.find[+t.closest('.item').dataset.n]=t.value;t.closest('.item').classList.remove('bad-field')}
+  saveDraft();
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.photo!==undefined){addFormPhotos(t);return}
+  if(t.dataset&&t.dataset.addphoto!==undefined){addFindingPhotos(t.closest('.fcard'),t,t.dataset.addphoto);return}
+  if(S.tab==='input'){
+    if(t.id==='f-date')FM().date=t.value; else if(t.id==='f-area')S.form.areaId=t.value;
+    else if(t.id==='f-unit'){S.dform.unitId=t.value;S.dform.ans={};S.dform.find={};S.dform.photos={};saveDraft();$('#view').dataset.built='';render();return}
+    saveDraft();return;
+  }
+  if(t.id==='d-from'){S.from=t.value;S.preset='custom';render()}
+  else if(t.id==='d-to'){S.to=t.value;S.preset='custom';render()}
+  else if(t.id==='d-weeks'){S.weeks=+t.value;render()}
+  else if(t.id==='d-trend'){S.trendArea=t.value;render()}
+  else if(t.id==='dd-gran'){S.gran=t.value;render()}
+  else if(t.id==='dd-unit'){S.dunit=t.value;render()}
+  else if(t.id==='f-status'){S.fstatus=t.value;render()}
+  else if(t.id==='f-farea'){S.farea=t.value;render()}
+  else if(t.dataset.fk){
+    const c=t.closest('.fcard'),aid=c.dataset.aid,n=c.dataset.n,patch={[t.dataset.fk]:t.value};
+    if(t.dataset.fk==='status'){
+      const au=(c.dataset.src==='d'?S.dauds:S.audits).find(x=>x.id===aid),f=((au&&au.finds)||{})[n]||{};
+      if(t.value==='Closed'&&!(f.donePhotos||[]).length){toast('Unggah foto bukti action plan dulu sebelum Closed.');render();return}
+      patch.closedAt=t.value==='Closed'?today():'';
+    }
+    updateFinding(aid,n,patch,c.dataset.src)}
+});
+document.addEventListener('focusout',()=>{setTimeout(()=>{if(S.dirty&&!inField()){S.dirty=false;render()}},120)});
+function inField(){const a=document.activeElement;return a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&a.closest('#view')&&S.tab!=='input'}
+
+/* ---------- boot ---------- */
+function refresh(){if(!S.role)return;if(S.tab==='input'){renderTabs();renderBanner();return}if(inField()){S.dirty=true;renderTabs();return}render()}
+(async function(){
+  S.form=loadDraft(DKEY,newForm);S.dform=loadDraft(DKEYD,newDForm);
+  try{const r=JSON.parse(localStorage.getItem(SKEY)||'null');if(r&&r.role){S.role=r.role;S.parea=r.area;S.sess=r;S.tab=r.role==='auditor'?'input':'dash'}}catch(e){}
+  render();
+  let db=null;
+  try{db=await claude.use('db')}catch(e){}
+  try{const u=await claude.use('user'); if(u){const c=await u.can('data.write'); if(c===false)S.canWrite=false}}catch(e){}
+  S.db=db; render();
+  if(!db)return;
+  const valid=a=>a.date&&a.areaId&&(a.ans||(a.score&&a.score.total!=null));
+  const merge=()=>{S.audits=[...(S.live||[]),...(S.histA||[])]};
+  db.collection('audits').onSnapshot(snap=>{
+    S.live=snap.docs.map(d=>Object.assign({id:d.id},d.data())).filter(valid);
+    merge();S.loaded=true;refresh();
+  },err=>{S.dberr=err});
+  db.collection('daudits').onSnapshot(snap=>{
+    S.dauds=snap.docs.map(d=>Object.assign({id:d.id},d.data())).filter(a=>a.unit&&a.date&&a.ans&&UNIT(a.unit));
+    refresh();
+  },()=>{});
+  db.collection('history').onSnapshot(snap=>{
+    S.histA=[];snap.docs.forEach(d=>((d.data()||{}).items||[]).forEach(x=>{if(valid(x))S.histA.push(x)}));
+    merge();refresh();
+  },()=>{});
+  db.doc('config/access').onSnapshot(snap=>{
+    S.access=snap.exists?snap.data():null;
+    if(S.role&&S.access&&S.sess&&S.access[S.role]&&S.access[S.role]!==S.sess.h){logout(true);return}
+    if(!S.role){if(!(document.activeElement&&document.activeElement.id==='l-pin'))render()}
+  },()=>{});
+  db.doc('config/areas').onSnapshot(snap=>{
+    const d=snap.exists&&snap.data();
+    if(d&&Array.isArray(d.list)&&d.list.length){const byId={};d.list.forEach(a=>byId[a.id]=a.name);S.areas=DEFAULT_AREAS.map(a=>({id:a.id,name:byId[a.id]||a.name}))}
+    else S.areas=DEFAULT_AREAS;
+    if(!S.role){if(!(document.activeElement&&document.activeElement.id==='l-pin'))render();return}
+    if(S.tab==='input'){const sel=$('#f-area');if(sel){sel.innerHTML=S.areas.map((a,i)=>`<option value="${a.id}" ${a.id===S.form.areaId?'selected':''}>${i+1}. ${esc(a.name)}</option>`).join('')}}
+    else refresh();
+  },()=>{});
+})();
+</script>
+
+</body></html>

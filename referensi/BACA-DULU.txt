@@ -1,0 +1,26 @@
+AUDIT INTERNAL PRODUKSI - ISI PAKET
+
+1. Audit_Internal_Produksi_TERBARU_v5.html
+   Versi terbaru: warna hijau/merah lebih terang, grafik tren 2 minggu muat tanpa geser,
+   dan menu admin "Poin Checklist" untuk menambah poin audit sendiri.
+
+2. versi-sebelumnya/
+   v3_asli : file yang kamu unggah awalnya.
+   v4      : v3 + warna lebih terang + grafik 2 minggu tanpa geser.
+
+3. uji/test_poin_checklist.py
+   Skrip uji otomatis (Playwright) memakai database tiruan. Untuk pengembang, tidak perlu dijalankan
+   untuk memakai aplikasi.
+
+PENTING - CARA MEMAKAI
+- File .html di paket ini adalah cadangan. Kalau dibuka langsung dari komputer, muncul banner
+  "Penyimpanan bersama belum tersambung" karena data disimpan di penyimpanan claude.ai, bukan di file.
+- Untuk dipakai sehari-hari, buka halaman "Audit Internal Produksi" di claude.ai dengan akun yang sama.
+  Versi terbaru (v5) sudah terpasang di sana dan datanya tetap.
+- Agar file ini bisa jalan sendiri di website (tanpa claude.ai), bagian penyimpanan harus diganti ke
+  database sendiri (mis. Supabase/Firebase). Itu langkah terpisah.
+
+CATATAN SKOR
+- Skor seksi = M / (M + DM) x bobot seksi. Menambah poin checklist tidak mengubah bobot seksi
+  dan tidak mengubah skor audit lama; nilai tiap poin di seksi itu menjadi bobot / jumlah poin.
+- Poin tambahan diberi nomor T1, T2, ... dan bisa dinonaktifkan (tidak dihapus) agar jawaban lama tetap ada.
