@@ -11,11 +11,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const b = await req.json().catch(() => ({}));
   const rows = await db.select().from(audits).where(eq(audits.id, id)).limit(1);
   if (!rows.length) return NextResponse.json({ error: 'Tidak ditemukan.' }, { status: 404 });
-  const finds = { ...((rows[0].finds as Record<string, unknown>) || {}) };
-  if (b?.n != null && b?.patch) {
-    finds[b.n] = { ...((finds[b.n] as object) || {}), ...b.patch };
+  const cur = rows[0];
+
+  const set: Record<string, unknown> = {};
+  if (b?.fields && typeof b.fields === 'object') {
+    const f = b.fields as Record<string, unknown>;
+    if (f.date != null) set.date = String(f.date);
+    if (f.areaId != null) set.areaId = String(f.areaId);
+    if (f.areaName != null) set.areaName = String(f.areaName);
+    if (f.auditor != null) set.auditor = String(f.auditor);
+    if (f.auditee != null) set.auditee = String(f.auditee);
+    if (f.ans != null) set.ans = f.ans;
+    if (f.score != null) set.score = f.score;
   }
-  await db.update(audits).set({ finds }).where(eq(audits.id, id));
+  if (b?.n != null && b?.patch) {
+    const finds = { ...((cur.finds as Record<string, unknown>) || {}) };
+    finds[b.n] = { ...((finds[b.n] as object) || {}), ...b.patch };
+    set.finds = finds;
+  }
+  if (!Object.keys(set).length) return NextResponse.json({ ok: true, changed: 0 });
+
+  await db.update(audits).set(set).where(eq(audits.id, id));
   return NextResponse.json({ ok: true });
 }
 
