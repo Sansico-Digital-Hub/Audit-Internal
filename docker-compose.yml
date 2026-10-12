@@ -1,0 +1,45 @@
+# Docker HANYA untuk aplikasi + migrasi.
+# Database memakai PostgreSQL yang SUDAH ADA di server (bukan container).
+#
+# Buat file `.env` di folder ini (dibaca otomatis oleh `docker compose`):
+#
+#   DATABASE_URL=postgresql://user:pass@host.docker.internal:5432/audit_internal
+#   SESSION_SECRET=<string-acak-panjang>
+#   SESSION_COOKIE_SECURE=false
+#   PIN_ADMIN=123098
+#   PIN_PRODUKSI=123456
+#   PIN_AUDITOR=123987
+#
+# `host.docker.internal` menunjuk PostgreSQL di mesin host. Bila DB di server lain,
+# ganti dengan IP/hostname-nya.
+
+services:
+  migrate:
+    build:
+      context: .
+      target: builder
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    command: npx drizzle-kit migrate
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      PIN_ADMIN: ${PIN_ADMIN:-}
+      PIN_PRODUKSI: ${PIN_PRODUKSI:-}
+      PIN_AUDITOR: ${PIN_AUDITOR:-}
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully

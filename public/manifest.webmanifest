@@ -1,0 +1,16 @@
+{
+  "name": "Audit Internal Produksi",
+  "short_name": "Audit Internal",
+  "description": "Process Audit Checklist - 17 area produksi + 8 unit departemen, skor M/DM.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f5f7",
+  "theme_color": "#0a6f9c",
+  "lang": "id",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
