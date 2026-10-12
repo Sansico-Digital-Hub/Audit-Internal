@@ -35,7 +35,7 @@ function RangeControls({ filters, extra }: { filters: Filters; extra?: React.Rea
         Sampai
         <input type="date" value={to} onChange={(e) => set({ to: e.target.value, preset: 'custom' })} />
       </label>
-      <div className="chips" style={{ alignSelf: 'end', paddingBottom: 2 }}>
+      <div className="chips preset-chips" style={{ alignSelf: 'end', paddingBottom: 2 }}>
         {[['all', 'Semua'], ['4w', '4 minggu'], ['8w', '8 minggu'], ['month', 'Bulan ini']].map(([k, l]) => (
           <button
             key={k}
@@ -48,6 +48,16 @@ function RangeControls({ filters, extra }: { filters: Filters; extra?: React.Rea
           </button>
         ))}
       </div>
+      <label className="f preset-select">
+        Rentang
+        <select value={preset} onChange={(e) => set({ ...presetRange(e.target.value), preset: e.target.value })}>
+          {[['all', 'Semua'], ['4w', '4 minggu'], ['8w', '8 minggu'], ['month', 'Bulan ini']].map(([k, l]) => (
+            <option key={k} value={k}>
+              {l}
+            </option>
+          ))}
+        </select>
+      </label>
       {extra}
     </div>
   );

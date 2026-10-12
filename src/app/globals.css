@@ -1418,7 +1418,7 @@ textarea:focus {
   margin: 2px 0 4px;
 }
 .nav-child {
-  padding-left: 44px;
+  padding-left: 36px;
   font-size: 13px;
   color: var(--neutral-500);
 }
@@ -1585,5 +1585,24 @@ textarea:focus {
   }
   .drawer {
     width: 100%;
+  }
+}
+
+/* ===== Riwayat mobile: Detail & Hapus rata kanan ===== */
+.rtable td.actions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ===== Rentang (preset) jadi dropdown di mobile ===== */
+.preset-select {
+  display: none;
+}
+@media (max-width: 640px) {
+  .preset-chips {
+    display: none;
+  }
+  .preset-select {
+    display: grid;
   }
 }

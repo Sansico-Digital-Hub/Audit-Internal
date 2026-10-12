@@ -4,10 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useApp } from './ctx';
-import { IconChevron, IconClose, IconLogo, IconLogout, IconPanel, NAV_ICONS } from './icons';
+import { IconBuilding, IconChevron, IconClose, IconFactory, IconLogo, IconLogout, IconPanel, NAV_ICONS } from './icons';
 import { ROLE_LABEL } from '@/lib/constants';
 import { linksFor } from '@/lib/nav';
 import { unitById } from '@/lib/scoring';
+
+const CHILD_ICON: Record<string, (p: { size?: number }) => React.ReactElement> = {
+  '/input/produksi': IconFactory,
+  '/input/departemen': IconBuilding,
+};
 
 export default function Sidebar({
   collapsed,
@@ -70,16 +75,20 @@ export default function Sidebar({
                 </button>
                 {isOpen && (
                   <div className="nav-children">
-                    {l.children.map((c) => (
-                      <Link
-                        key={c.href}
-                        href={c.href}
-                        className={`nav-item nav-child${pathname === c.href ? ' active' : ''}`}
-                        onClick={onNavigate}
-                      >
-                        <span className="sb-label">{c.label}</span>
-                      </Link>
-                    ))}
+                    {l.children.map((c) => {
+                      const CIcon = CHILD_ICON[c.href];
+                      return (
+                        <Link
+                          key={c.href}
+                          href={c.href}
+                          className={`nav-item nav-child${pathname === c.href ? ' active' : ''}`}
+                          onClick={onNavigate}
+                        >
+                          {CIcon && <CIcon size={18} />}
+                          <span className="sb-label">{c.label}</span>
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -92,7 +92,7 @@ export default function History({
                       <span className={`pill ${cls(a.c.total)} mono`}>{fmt(a.c.total)}</span>
                     </td>
                     <td data-l="DM" className="n mono">{a.c.dm}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
+                    <td className="actions" style={{ whiteSpace: 'nowrap' }}>
                       <button className="btn ghost sm" onClick={() => setDetailId(a.id)}>
                         Detail
                       </button>{' '}
