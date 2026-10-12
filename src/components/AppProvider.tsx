@@ -11,6 +11,16 @@ import type { Audit, CustomItem, DeptAudit } from '@/lib/types';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
+// Auto-refresh senyap: perbarui data tanpa efek samping (tanpa skeleton, tanpa
+// fetch saat pindah tab / jaringan pulih, pertahankan data lama saat revalidasi).
+const SWR_OPTS = {
+  refreshInterval: 30000,
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  refreshWhenHidden: false,
+  keepPreviousData: true,
+};
+
 interface ConfigResp {
   session: Session | null;
   setup: boolean;
@@ -22,19 +32,19 @@ interface ConfigResp {
 
 export default function AppProvider({ initialSession, children }: { initialSession: Session; children: React.ReactNode }) {
   const router = useRouter();
-  const { data: cfg, mutate: mutateCfg } = useSWR<ConfigResp>('/api/config', fetcher, { refreshInterval: 30000 });
+  const { data: cfg, mutate: mutateCfg } = useSWR<ConfigResp>('/api/config', fetcher, SWR_OPTS);
   const session = cfg ? cfg.session : initialSession;
   const loggedIn = !!session;
 
   const { data: audits, mutate: mutateAudits, isLoading: auditsLoading } = useSWR<Audit[]>(
     loggedIn ? '/api/audits' : null,
     fetcher,
-    { refreshInterval: 30000 },
+    SWR_OPTS,
   );
   const { data: daudits, mutate: mutateD, isLoading: dauditsLoading } = useSWR<DeptAudit[]>(
     loggedIn ? '/api/daudits' : null,
     fetcher,
-    { refreshInterval: 30000 },
+    SWR_OPTS,
   );
   const auditsArr = audits ?? [];
   const dauditsArr = daudits ?? [];

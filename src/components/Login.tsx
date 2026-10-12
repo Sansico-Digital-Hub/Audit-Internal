@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client';
 import { defaultPath } from '@/lib/nav';
 import { SEED_UNITS } from '@/lib/seed-data';
+import { IconEye, IconEyeOff } from './icons';
 import type { Role } from '@/lib/types';
 
 interface Cfg {
@@ -23,6 +24,7 @@ export default function Login() {
   const [area, setArea] = useState('a1');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPin, setShowPin] = useState(false);
 
   useEffect(() => {
     fetch('/api/config')
@@ -116,20 +118,32 @@ export default function Login() {
         )}
         <label className="f">
           {setup ? 'Buat PIN admin (min. 4 karakter)' : 'PIN'}
-          <input
-            type="password"
-            autoComplete="off"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') doLogin();
-            }}
-          />
+          <span className="pin-field">
+            <input
+              type={showPin ? 'text' : 'password'}
+              inputMode="numeric"
+              autoComplete="off"
+              value={pin}
+              placeholder="••••••"
+              onChange={(e) => setPin(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') doLogin();
+              }}
+            />
+            <button
+              type="button"
+              className="pin-toggle"
+              aria-label={showPin ? 'Sembunyikan PIN' : 'Tampilkan PIN'}
+              onClick={() => setShowPin((s) => !s)}
+            >
+              {showPin ? <IconEyeOff /> : <IconEye />}
+            </button>
+          </span>
         </label>
         <div className="muted" style={{ minHeight: 18 }}>
           {msg}
         </div>
-        <button className="btn" type="button" disabled={busy || !cfg} onClick={doLogin}>
+        <button className="btn" type="button" disabled={busy} onClick={doLogin}>
           {setup ? 'Buat PIN dan masuk' : 'Masuk'}
         </button>
         <div className="muted" style={{ fontSize: 12 }}>

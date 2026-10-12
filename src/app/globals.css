@@ -1606,3 +1606,48 @@ textarea:focus {
     display: grid;
   }
 }
+
+/* ===== Field PIN khusus ===== */
+.pin-field {
+  position: relative;
+  display: block;
+}
+.pin-field input {
+  padding-right: 46px;
+  letter-spacing: 0.4em;
+  font-family: var(--f-mono);
+  font-size: 18px;
+  text-align: center;
+}
+.pin-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--neutral-500);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.pin-toggle:hover {
+  background: var(--blue-50);
+  color: var(--blue-700);
+}
+
+/* ===== Sidebar: footer (logout) selalu terlihat ===== */
+.sidebar {
+  height: 100vh;
+  height: 100dvh;
+}
+.sidebar-nav {
+  min-height: 0;
+}
+.sidebar-foot {
+  flex: none;
+}
