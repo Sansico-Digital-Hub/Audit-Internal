@@ -64,10 +64,10 @@ Blue-family + 1 netral agar terbaca & tetap “biru”:
 
 | Token | Hex | Seksi |
 | --- | --- | --- |
-| `--c1` | `#1f5fe8` | Product |
-| `--c2` | `#0ea5e9` | Process |
-| `--c3` | `#6366f1` | System |
-| `--c4` | `#94a3b8` | Area Kerja |
+| `--c1` | `#2b5f9e` | Product |
+| `--c2` | `#b45f06` | Process |
+| `--c3` | `#6b4c98` | System |
+| `--c4` | `#1f7a6e` | Area Kerja |
 
 Heatmap skor memakai `--good/--warn/--bad` sesuai ambang. Garis standar = `--warn` putus-putus.
 
@@ -212,7 +212,7 @@ Ganti blok `:root` di `src/app/globals.css` dengan token berikut (nama lama dipe
   --bad:#dc2626;  --bad-bg:#fee2e2;  --bad-ink:#991b1b;  --bad-fill:#ef4444;
   --na:#64748b;   --na-bg:#eef2f7;   --na-ink:#64748b;   --na-fill:#94a3b8;
   /* grafik */
-  --c1:#1f5fe8; --c2:#0ea5e9; --c3:#6366f1; --c4:#94a3b8;
+  --c1:#2b5f9e; --c2:#b45f06; --c3:#6b4c98; --c4:#1f7a6e;
   /* pemetaan lama -> baru (agar komponen tak berubah) */
   --bg:var(--neutral-50); --surface:var(--white); --surface2:var(--neutral-100);
   --ink:var(--neutral-900); --muted:var(--neutral-500); --line:var(--neutral-200);
