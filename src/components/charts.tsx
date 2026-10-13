@@ -280,13 +280,19 @@ function ChartAv({
                       if (p <= 0) return null;
                       const y1 = y(cum + p);
                       const h = (p / 100) * PB;
-                      const el = (
-                        <rect key={i} x={x} y={y1} width={BW} height={h} fill={`var(--c${i + 1})`}>
-                          <title>{`${a.name} · WE ${wlab(w)} · ${sc.name}: ${p.toFixed(1)} dari ${sc.w}`}</title>
-                        </rect>
-                      );
                       cum += p;
-                      return el;
+                      return (
+                        <g key={i}>
+                          <rect x={x} y={y1} width={BW} height={h} fill={`var(--c${i + 1})`}>
+                            <title>{`${a.name} · WE ${wlab(w)} · ${sc.name}: ${p.toFixed(1)} dari ${sc.w}`}</title>
+                          </rect>
+                          {h >= 13 && BW >= 16 && (
+                            <text className="sl" x={cx} y={y1 + h / 2 + 4} textAnchor="middle">
+                              {p.toFixed(0)}
+                            </text>
+                          )}
+                        </g>
+                      );
                     })}
                   {c &&
                     (() => {
@@ -384,13 +390,20 @@ function ChartAh({
                     const p = c.secs[i]?.pts || 0;
                     if (p <= 0) return null;
                     const w2 = (p / 100) * (W - L - R);
-                    const el = (
-                      <rect key={i} x={x(cum)} y={by} width={w2} height={BH} fill={`var(--c${i + 1})`}>
-                        <title>{`${a.name} · WE ${wlab(w)} · ${sc.name}: ${p.toFixed(1)} dari ${sc.w}`}</title>
-                      </rect>
-                    );
+                    const left = x(cum);
                     cum += p;
-                    return el;
+                    return (
+                      <g key={i}>
+                        <rect x={left} y={by} width={w2} height={BH} fill={`var(--c${i + 1})`}>
+                          <title>{`${a.name} · WE ${wlab(w)} · ${sc.name}: ${p.toFixed(1)} dari ${sc.w}`}</title>
+                        </rect>
+                        {w2 >= 16 && BH >= 11 && (
+                          <text className="sl" x={left + w2 / 2} y={by + BH / 2 + 4} textAnchor="middle" style={{ fontSize: '10px' }}>
+                            {p.toFixed(0)}
+                          </text>
+                        )}
+                      </g>
+                    );
                   })}
                   <text
                     className="tl"
