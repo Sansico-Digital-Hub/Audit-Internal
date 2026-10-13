@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useApp } from './ctx';
-import { IconClose } from './icons';
+import { IconClose, IconEdit } from './icons';
 import { api } from '@/lib/client';
 import { PRODUCT_SECTIONS } from '@/lib/constants';
 import { cls, dateLabel, fmt } from '@/lib/format';
@@ -223,8 +223,8 @@ export default function History({
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {!editing && (
-                  <button className="btn ghost sm" onClick={startEdit}>
-                    Edit
+                  <button className="btn sm" onClick={startEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <IconEdit size={16} /> Edit
                   </button>
                 )}
                 <button className="icon-btn" onClick={closeDetail} aria-label="Tutup">
@@ -234,93 +234,99 @@ export default function History({
             </div>
 
             {editing && form ? (
-              <div className="drawer-body">
-                <label className="f">
-                  Tanggal
-                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-                </label>
-                {isDept(detail) ? (
-                  <label className="f">
-                    Unit
-                    <select
-                      value={form.unit}
-                      onChange={(e) => {
-                        const u = unitById(e.target.value);
-                        setForm({ ...form, unit: e.target.value, cats: (u?.cats || []).map(() => '') });
-                      }}
-                    >
-                      {catalog.units.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.dept} · {u.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : (
-                  <label className="f">
-                    Area
-                    <select value={form.areaId} onChange={(e) => setForm({ ...form, areaId: e.target.value })}>
-                      {areas.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                <div className="fgrid">
-                  <label className="f">
-                    Auditor
-                    <input value={form.auditor} onChange={(e) => setForm({ ...form, auditor: e.target.value })} />
-                  </label>
-                  <label className="f">
-                    Auditee
-                    <input value={form.auditee} onChange={(e) => setForm({ ...form, auditee: e.target.value })} />
-                  </label>
+              <>
+                <div className="drawer-body">
+                  <div className="edit-section">
+                    <div className="edit-title">Identitas</div>
+                    <div className="edit-grid">
+                      <label className="f">
+                        Tanggal
+                        <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                      </label>
+                      {isDept(detail) ? (
+                        <label className="f">
+                          Unit
+                          <select
+                            value={form.unit}
+                            onChange={(e) => {
+                              const u = unitById(e.target.value);
+                              setForm({ ...form, unit: e.target.value, cats: (u?.cats || []).map(() => '') });
+                            }}
+                          >
+                            {catalog.units.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.dept} · {u.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : (
+                        <label className="f">
+                          Area
+                          <select value={form.areaId} onChange={(e) => setForm({ ...form, areaId: e.target.value })}>
+                            {areas.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                      <label className="f">
+                        Auditor
+                        <input value={form.auditor} onChange={(e) => setForm({ ...form, auditor: e.target.value })} />
+                      </label>
+                      <label className="f">
+                        Auditee
+                        <input value={form.auditee} onChange={(e) => setForm({ ...form, auditee: e.target.value })} />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="edit-section">
+                    <div className="edit-title">Skor {hasAns(detail) ? '· dari jawaban poin' : ''}</div>
+                    {!hasAns(detail) ? (
+                      <div className="edit-grid">
+                        {isDept(detail)
+                          ? (unitById(form.unit)?.cats || []).map((c, i) => (
+                              <label className="f" key={i}>
+                                {c.name} ({+c.w.toFixed(1)})
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  value={form.cats[i] || ''}
+                                  onChange={(e) => {
+                                    const cats = [...form.cats];
+                                    cats[i] = e.target.value;
+                                    setForm({ ...form, cats });
+                                  }}
+                                />
+                              </label>
+                            ))
+                          : PRODUCT_SECTIONS.map((s) => (
+                              <label className="f" key={s.k}>
+                                {s.name} ({s.w})
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  value={form.sec[s.k] || ''}
+                                  onChange={(e) => setForm({ ...form, sec: { ...form.sec, [s.k]: e.target.value } })}
+                                />
+                              </label>
+                            ))}
+                        <label className="f">
+                          Total
+                          <input type="number" inputMode="decimal" value={form.total} onChange={(e) => setForm({ ...form, total: e.target.value })} />
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="muted" style={{ fontSize: 13 }}>
+                        Skor dihitung dari jawaban tiap poin, jadi tidak diedit di sini.
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                {!hasAns(detail) ? (
-                  <div className="grid2" style={{ gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    {isDept(detail)
-                      ? (unitById(form.unit)?.cats || []).map((c, i) => (
-                          <label className="f" key={i}>
-                            {c.name} ({+c.w.toFixed(1)})
-                            <input
-                              type="number"
-                              value={form.cats[i] || ''}
-                              onChange={(e) => {
-                                const cats = [...form.cats];
-                                cats[i] = e.target.value;
-                                setForm({ ...form, cats });
-                              }}
-                            />
-                          </label>
-                        ))
-                      : PRODUCT_SECTIONS.map((s) => (
-                          <label className="f" key={s.k}>
-                            {s.name} ({s.w})
-                            <input
-                              type="number"
-                              value={form.sec[s.k] || ''}
-                              onChange={(e) => setForm({ ...form, sec: { ...form.sec, [s.k]: e.target.value } })}
-                            />
-                          </label>
-                        ))}
-                    <label className="f">
-                      Total
-                      <input type="number" value={form.total} onChange={(e) => setForm({ ...form, total: e.target.value })} />
-                    </label>
-                  </div>
-                ) : (
-                  <div className="muted" style={{ fontSize: 13 }}>
-                    Skor dihitung dari jawaban tiap poin, jadi tidak diedit di sini.
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn" disabled={busy} onClick={save}>
-                    Simpan
-                  </button>
+                <div className="drawer-foot">
                   <button
                     className="btn ghost"
                     onClick={() => {
@@ -330,8 +336,11 @@ export default function History({
                   >
                     Batal
                   </button>
+                  <button className="btn" disabled={busy} onClick={save}>
+                    {busy ? 'Menyimpan…' : 'Simpan'}
+                  </button>
                 </div>
-              </div>
+              </>
             ) : (
               <div className="drawer-body">
                 <div className="parts">
