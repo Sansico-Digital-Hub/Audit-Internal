@@ -17,6 +17,35 @@ const num = (v: string) => {
   return Number.isFinite(n) ? n : null;
 };
 
+function ScoreField({
+  name,
+  weight,
+  value,
+  onChange,
+  total,
+}: {
+  name: string;
+  weight: number;
+  value: string;
+  onChange: (v: string) => void;
+  total?: boolean;
+}) {
+  const ratio = total ? null : weight ? Math.max(0, Math.min(1, Number(value || 0) / weight)) : null;
+  return (
+    <label className={`score-field${total ? ' total' : ''}`}>
+      <span className="score-name">
+        {name} <span className="muted">/{+weight.toFixed(1)}</span>
+      </span>
+      <input type="number" inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value)} />
+      {ratio != null && (
+        <span className="score-bar">
+          <i style={{ width: `${ratio * 100}%`, background: `var(--${ratio >= 0.95 ? 'good' : ratio >= 0.85 ? 'warn' : 'bad'}-fill)` }} />
+        </span>
+      )}
+    </label>
+  );
+}
+
 interface Form {
   date: string;
   areaId: string;
@@ -62,8 +91,13 @@ export default function History({
       </>
     );
 
-  const label = (a: Audit | DeptAudit) =>
-    isDept(a) ? `${a.dept} · ${a.unitName || unitById(a.unit)?.name || a.unit}` : a.areaName || a.areaId;
+  const label = (a: Audit | DeptAudit) => {
+    if (!isDept(a)) return a.areaName || a.areaId;
+    const u = unitById(a.unit);
+    const name = a.unitName || u?.name || a.unit;
+    const dept = a.dept || u?.dept;
+    return dept && dept !== name ? `${dept} · ${name}` : name;
+  };
 
   function closeDetail() {
     setDetailId(null);
@@ -264,7 +298,7 @@ export default function History({
                           >
                             {catalog.units.map((u) => (
                               <option key={u.id} value={u.id}>
-                                {u.dept} · {u.name}
+                                {u.dept === u.name ? u.name : `${u.dept} · ${u.name}`}
                               </option>
                             ))}
                           </select>
@@ -330,35 +364,28 @@ export default function History({
                       <div className="edit-grid">
                         {isDept(detail)
                           ? (unitById(form.unit)?.cats || []).map((c, i) => (
-                              <label className="f" key={i}>
-                                {c.name} ({+c.w.toFixed(1)})
-                                <input
-                                  type="number"
-                                  inputMode="decimal"
-                                  value={form.cats[i] || ''}
-                                  onChange={(e) => {
-                                    const cats = [...form.cats];
-                                    cats[i] = e.target.value;
-                                    setForm({ ...form, cats });
-                                  }}
-                                />
-                              </label>
+                              <ScoreField
+                                key={i}
+                                name={c.name}
+                                weight={c.w}
+                                value={form.cats[i] || ''}
+                                onChange={(v) => {
+                                  const cats = [...form.cats];
+                                  cats[i] = v;
+                                  setForm({ ...form, cats });
+                                }}
+                              />
                             ))
                           : PRODUCT_SECTIONS.map((s) => (
-                              <label className="f" key={s.k}>
-                                {s.name} ({s.w})
-                                <input
-                                  type="number"
-                                  inputMode="decimal"
-                                  value={form.sec[s.k] || ''}
-                                  onChange={(e) => setForm({ ...form, sec: { ...form.sec, [s.k]: e.target.value } })}
-                                />
-                              </label>
+                              <ScoreField
+                                key={s.k}
+                                name={s.name}
+                                weight={s.w}
+                                value={form.sec[s.k] || ''}
+                                onChange={(v) => setForm({ ...form, sec: { ...form.sec, [s.k]: v } })}
+                              />
                             ))}
-                        <label className="f">
-                          Total
-                          <input type="number" inputMode="decimal" value={form.total} onChange={(e) => setForm({ ...form, total: e.target.value })} />
-                        </label>
+                        <ScoreField name="Total" weight={100} value={form.total} onChange={(v) => setForm({ ...form, total: v })} total />
                       </div>
                     )}
                   </div>
