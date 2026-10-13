@@ -1679,3 +1679,70 @@ textarea:focus {
   background: var(--surface);
   flex: none;
 }
+
+/* ===== Editor jawaban per poin (edit record ber-jawaban) ===== */
+.ans-list {
+  display: grid;
+  gap: 14px;
+}
+.ans-group {
+  display: grid;
+  gap: 4px;
+}
+.ans-gtitle {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--neutral-500);
+  background: var(--neutral-100);
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+}
+.ans-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 0;
+}
+.ans-t {
+  font-size: 13px;
+  min-width: 0;
+}
+.ans-seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  flex: none;
+}
+.ans-seg button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 36px;
+  min-height: 30px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 6px;
+}
+.ans-seg button:last-child {
+  border-right: 0;
+}
+.ans-seg button.on-M {
+  background: var(--good-fill);
+  color: var(--on-good);
+}
+.ans-seg button.on-DM {
+  background: var(--bad-fill);
+  color: var(--on-bad);
+}
+.ans-seg button.on-NA {
+  background: var(--na-bg);
+  color: var(--na);
+}

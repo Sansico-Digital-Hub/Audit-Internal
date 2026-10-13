@@ -6,8 +6,8 @@ import { IconClose, IconEdit } from './icons';
 import { api } from '@/lib/client';
 import { PRODUCT_SECTIONS } from '@/lib/constants';
 import { cls, dateLabel, fmt } from '@/lib/format';
-import { cmp, nl, unitById, withCalc } from '@/lib/scoring';
-import type { Audit, DeptAudit } from '@/lib/types';
+import { calc, cmp, inSec, nl, unitById, unitSecs, withCalc } from '@/lib/scoring';
+import type { Answer, Audit, DeptAudit } from '@/lib/types';
 
 const hasAns = (a: Audit | DeptAudit) => !!a.ans && Object.keys(a.ans).length > 0;
 const num = (v: string) => {
@@ -26,6 +26,7 @@ interface Form {
   total: string;
   sec: Record<string, string>;
   cats: string[];
+  ans: Record<string, Answer>;
 }
 
 export default function History({
@@ -48,6 +49,10 @@ export default function History({
   const list = [...audits, ...daudits].map(withCalc).sort((a, b) => -cmp(a, b));
   const detail = list.find((a) => a.id === detailId) || null;
   const isDept = (a: Audit | DeptAudit): a is DeptAudit => 'unit' in a;
+  const secsOf = (a: Audit | DeptAudit, unit: string) =>
+    isDept(a) ? unitSecs(unitById(unit) || unitById(a.unit) || catalog.units[0]) : PRODUCT_SECTIONS;
+  const itemsOf = (a: Audit | DeptAudit, unit: string) => (isDept(a) ? unitById(unit)?.items || [] : catalog.items);
+  const previewTotal = detail && form && hasAns(detail) ? calc(form.ans, secsOf(detail, form.unit)).total : null;
 
   if (!list.length)
     return (
@@ -78,6 +83,7 @@ export default function History({
       total: detail.c.total != null ? String(+detail.c.total.toFixed(1)) : '',
       sec: {},
       cats: [],
+      ans: { ...(detail.ans || {}) },
     };
     if (!dept) {
       PRODUCT_SECTIONS.forEach((s) => {
@@ -102,11 +108,14 @@ export default function History({
       fields.unit = form.unit;
       fields.unitName = u?.name || form.unit;
       fields.dept = u?.dept || '';
-      if (!hasAns(detail)) fields.score = { total: num(form.total), dm: (detail.score as { dm?: number } | undefined)?.dm ?? 0, cats: form.cats.map(num) };
+      if (hasAns(detail)) fields.ans = form.ans;
+      else fields.score = { total: num(form.total), dm: (detail.score as { dm?: number } | undefined)?.dm ?? 0, cats: form.cats.map(num) };
     } else {
       fields.areaId = form.areaId;
       fields.areaName = areas.find((a) => a.id === form.areaId)?.name || form.areaId;
-      if (!hasAns(detail)) {
+      if (hasAns(detail)) {
+        fields.ans = form.ans;
+      } else {
         const score: Record<string, number | null> = { total: num(form.total), dm: (detail.score as { dm?: number } | undefined)?.dm ?? 0 };
         PRODUCT_SECTIONS.forEach((s) => (score[s.k] = num(form.sec[s.k])));
         fields.score = score;
@@ -284,8 +293,40 @@ export default function History({
                   </div>
 
                   <div className="edit-section">
-                    <div className="edit-title">Skor {hasAns(detail) ? '· dari jawaban poin' : ''}</div>
-                    {!hasAns(detail) ? (
+                    <div className="edit-title">
+                      {hasAns(detail) ? `Jawaban tiap poin · skor ${fmt(previewTotal)}` : 'Skor'}
+                    </div>
+                    {hasAns(detail) ? (
+                      <div className="ans-list">
+                        {secsOf(detail, form.unit).map((s) => {
+                          const items = itemsOf(detail, form.unit).filter((i) => inSec(i, s));
+                          if (!items.length) return null;
+                          return (
+                            <div key={s.k} className="ans-group">
+                              <div className="ans-gtitle">{s.name}</div>
+                              {items.map((i) => (
+                                <div className="ans-row" key={i.n}>
+                                  <span className="num">{nl(i.n)}</span>
+                                  <span className="ans-t">{i.t}</span>
+                                  <span className="ans-seg">
+                                    {(['M', 'DM', 'NA'] as const).map((v) => (
+                                      <button
+                                        key={v}
+                                        type="button"
+                                        className={form.ans[i.n] === v ? `on on-${v}` : ''}
+                                        onClick={() => setForm({ ...form, ans: { ...form.ans, [i.n]: v } })}
+                                      >
+                                        {v === 'NA' ? 'N/A' : v}
+                                      </button>
+                                    ))}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
                       <div className="edit-grid">
                         {isDept(detail)
                           ? (unitById(form.unit)?.cats || []).map((c, i) => (
@@ -318,10 +359,6 @@ export default function History({
                           Total
                           <input type="number" inputMode="decimal" value={form.total} onChange={(e) => setForm({ ...form, total: e.target.value })} />
                         </label>
-                      </div>
-                    ) : (
-                      <div className="muted" style={{ fontSize: 13 }}>
-                        Skor dihitung dari jawaban tiap poin, jadi tidak diedit di sini.
                       </div>
                     )}
                   </div>
