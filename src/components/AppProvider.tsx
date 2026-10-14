@@ -72,7 +72,11 @@ export default function AppProvider({ initialSession, children }: { initialSessi
 
   const catalog = useMemo(() => buildCatalog(cfg?.custom || []), [cfg?.custom]);
   const areas = cfg?.areas ?? [];
-  const openCount = openCounts(auditsArr, dauditsArr);
+  const scoped = session?.role === 'prod';
+  const openCount = openCounts(
+    scoped ? auditsArr.filter((a) => a.areaId === session?.area) : auditsArr,
+    scoped ? dauditsArr.filter((a) => a.unit === session?.area) : dauditsArr,
+  );
   const loading = !cfg || (loggedIn && (auditsLoading || dauditsLoading));
 
   const toast = (m: string) => setToastMsg({ m, k: now() });
