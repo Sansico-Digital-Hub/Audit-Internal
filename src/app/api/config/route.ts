@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
 import { readSession } from '@/lib/auth';
-import { getAccess, getConfig } from '@/lib/config-store';
+import { getAccess, getConfig, getScopePins } from '@/lib/config-store';
 import { envPin } from '@/lib/pins';
 import { DEFAULT_AREA_NAMES } from '@/lib/seed-data';
 import type { AreasConfig, CustomConfig } from '@/lib/config-store';
 
-const DB_HINT = 'Database tidak siap / tidak terjangkau. Pastikan migrasi sudah dijalankan (npm run db:migrate) dan DATABASE_URL benar. Cek /api/health.';
+const DB_HINT = 'Database tidak siap / tidak terjangkau. Pastikan migrasi sudah dijalankan dan DATABASE_URL benar. Cek /api/health.';
 
 export async function GET() {
   try {
     const s = await readSession();
     const access = (await getAccess()) || {};
+    const scopePins = (await getScopePins()) || {};
     const areasCfg = await getConfig<AreasConfig>('areas');
     const customCfg = await getConfig<CustomConfig>('customitems');
 
@@ -32,6 +33,7 @@ export async function GET() {
         auditor: !!envPin('auditor'),
         admin: !!envPin('admin'),
       },
+      scopePins: Object.fromEntries(Object.entries(scopePins).map(([k, v]) => [k, !!v])),
       areas,
       custom: customCfg?.list || [],
     });

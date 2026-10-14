@@ -1791,3 +1791,43 @@ textarea:focus {
   border-radius: 3px;
   transition: width 0.15s ease;
 }
+
+/* ===== PIN per area/unit (halaman Akses) ===== */
+.scope-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+@media (max-width: 640px) {
+  .scope-list {
+    grid-template-columns: 1fr;
+  }
+}
+.scope-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 8px 10px;
+  background: var(--surface);
+}
+.scope-name {
+  grid-column: 1;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+}
+.scope-row .pill {
+  grid-column: 2;
+  justify-self: end;
+  font-size: 11px;
+}
+.scope-row input {
+  grid-column: 1 / -1;
+}
+.scope-row button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}

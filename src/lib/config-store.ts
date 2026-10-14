@@ -28,3 +28,4 @@ export async function setConfig(key: string, value: unknown) {
 }
 
 export const getAccess = () => getConfig<AccessConfig>('access');
+export const getScopePins = () => getConfig<Record<string, string>>('scopepins');

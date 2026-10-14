@@ -26,6 +26,7 @@ interface ConfigResp {
   setup: boolean;
   access: { prod: boolean; auditor: boolean; admin: boolean };
   envManaged: { prod: boolean; auditor: boolean; admin: boolean };
+  scopePins: Record<string, boolean>;
   areas: { id: string; name: string }[];
   custom: CustomItem[];
 }
@@ -94,6 +95,7 @@ export default function AppProvider({ initialSession, children }: { initialSessi
         areas,
         access: cfg?.access ?? { prod: false, auditor: false, admin: false },
         envManaged: cfg?.envManaged ?? { prod: false, auditor: false, admin: false },
+        scopePins: cfg?.scopePins ?? {},
         setup: !!cfg?.setup,
         audits: auditsArr,
         daudits: dauditsArr,

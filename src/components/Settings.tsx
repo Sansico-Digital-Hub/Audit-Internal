@@ -307,8 +307,9 @@ export function CustomItemsView() {
 }
 
 export function AccessView() {
-  const { access, session, setup, envManaged, toast, refresh } = useApp();
-  const [pins, setPins] = useState<Record<string, string>>({ prod: '', auditor: '', admin: '' });
+  const { access, envManaged, scopePins, areas, catalog, session, setup, toast, refresh } = useApp();
+  const [rolePins, setRolePins] = useState<Record<string, string>>({ prod: '', auditor: '', admin: '' });
+  const [scopeEdits, setScopeEdits] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   if (session?.role !== 'admin' && !setup)
@@ -317,9 +318,10 @@ export function AccessView() {
   async function save() {
     setBusy(true);
     try {
-      await api('/api/config/access', { method: 'PUT', body: JSON.stringify(pins) });
+      await api('/api/config/access', { method: 'PUT', body: JSON.stringify({ ...rolePins, scopePins: scopeEdits }) });
       toast('PIN tersimpan');
-      setPins({ prod: '', auditor: '', admin: '' });
+      setRolePins({ prod: '', auditor: '', admin: '' });
+      setScopeEdits({});
       refresh();
     } catch (e) {
       toast((e as Error).message);
@@ -327,51 +329,90 @@ export function AccessView() {
     setBusy(false);
   }
 
-  const envKeys: Record<string, string> = { prod: 'PIN_PRODUKSI', auditor: 'PIN_AUDITOR', admin: 'PIN_ADMIN' };
   const anyEnv = envManaged.admin || envManaged.prod || envManaged.auditor;
-  const allEnv = envManaged.admin && envManaged.prod && envManaged.auditor;
+
+  const scopeRows = (list: { id: string; name: string }[]) =>
+    list.map((s) => {
+      const has = !!scopePins[s.id];
+      const clearing = scopeEdits[s.id] === '';
+      return (
+        <div className="scope-row" key={s.id}>
+          <span className="scope-name">{s.name}</span>
+          <span className={`pill ${has ? 'good' : 'na'}`}>{has ? (clearing ? 'akan dihapus' : 'ada PIN') : 'ikut PIN Produksi'}</span>
+          <input
+            type="password"
+            autoComplete="off"
+            value={scopeEdits[s.id] ?? ''}
+            placeholder={has ? 'PIN baru' : 'PIN khusus (opsional)'}
+            onChange={(e) => setScopeEdits((p) => ({ ...p, [s.id]: e.target.value }))}
+          />
+          {has && !clearing && (
+            <button type="button" className="btn ghost sm" onClick={() => setScopeEdits((p) => ({ ...p, [s.id]: '' }))}>
+              Hapus PIN
+            </button>
+          )}
+          {clearing && (
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() =>
+                setScopeEdits((p) => {
+                  const n = { ...p };
+                  delete n[s.id];
+                  return n;
+                })
+              }
+            >
+              Batal hapus
+            </button>
+          )}
+        </div>
+      );
+    });
 
   return (
     <>
       <div>
         <h2>Akses dan PIN</h2>
         <p className="muted" style={{ margin: '4px 0 0' }}>
-          Kosongkan kolom yang tidak ingin diubah. Anggota tim mengganti peran hanya dengan PIN ini. Ini pembatas akses di aplikasi,
-          bukan pengganti pengaturan server. Bagikan tautan hanya ke orang di lingkungan kerja.
+          Atur PIN tiap peran dan tiap area/unit. Hanya admin yang bisa mengubah. Kosongkan kolom yang tidak ingin diubah.
         </p>
       </div>
       <section className="card pnl">
         {anyEnv && (
           <div className="banner" style={{ marginTop: 0 }}>
-            Sebagian PIN diatur melalui environment server (tidak bisa diubah dari sini). Hapus variabel terkait bila ingin mengaturnya dari halaman ini.
+            PIN di environment tersedia sebagai cadangan, tetapi PIN yang diatur di sini (disimpan di database) yang dipakai.
           </div>
         )}
+        <h3>PIN per peran</h3>
         <div className="meta" style={{ padding: 0 }}>
           {(['prod', 'auditor', 'admin'] as Role[]).map((r) => (
             <label className="f" key={r}>
               <span className="lbl">
                 PIN {ROLE_LABEL[r]}{' '}
-                {envManaged[r] ? (
-                  <span className="pill na">via {envKeys[r]}</span>
-                ) : access[r] ? (
-                  <span className="pill good">sudah diatur</span>
-                ) : (
-                  <span className="pill bad">belum diatur</span>
-                )}
+                {access[r] ? <span className="pill good">sudah diatur</span> : <span className="pill bad">belum diatur</span>}
               </span>
               <input
                 type="password"
                 autoComplete="off"
-                placeholder={envManaged[r] ? `Diatur via ${envKeys[r]}` : 'PIN baru'}
-                value={pins[r]}
-                disabled={envManaged[r]}
-                onChange={(e) => setPins({ ...pins, [r]: e.target.value })}
+                placeholder="PIN baru"
+                value={rolePins[r]}
+                onChange={(e) => setRolePins({ ...rolePins, [r]: e.target.value })}
               />
             </label>
           ))}
         </div>
+
+        <h3>PIN per area produksi</h3>
+        <div className="scope-list">{scopeRows(areas)}</div>
+
+        <h3>PIN per unit departemen</h3>
+        <div className="scope-list">
+          {scopeRows(catalog.units.map((u) => ({ id: u.id, name: u.dept === u.name ? u.name : `${u.dept} · ${u.name}` })))}
+        </div>
+
         <div>
-          <button className="btn" type="button" disabled={busy || allEnv} onClick={save}>
+          <button className="btn" type="button" disabled={busy} onClick={save}>
             Simpan PIN
           </button>
         </div>

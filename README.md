@@ -81,7 +81,7 @@ Compose menjalankan `migrate` (sekali jalan, `drizzle-kit migrate`) lalu `app`. 
 
 ## Catatan
 
-- **PIN per peran via environment**: `PIN_ADMIN`, `PIN_PRODUKSI`, `PIN_AUDITOR`. Bila diisi, PIN tersebut yang berlaku dan kolom di halaman **Akses** menjadi read-only. Hapus variabelnya bila ingin mengatur PIN dari halaman Akses.
+- **PIN diatur admin** di halaman **Akses**: PIN per peran (Produksi/Auditor/Admin) **dan** PIN khusus per area/unit (departemen bisa punya PIN sendiri). Disimpan di database; hanya admin yang bisa mengubah. Variabel env `PIN_ADMIN`/`PIN_PRODUKSI`/`PIN_AUDITOR` hanya **cadangan** (dipakai bila PIN belum diatur di DB).
 - **Ganti `SESSION_SECRET`** di produksi dengan string acak panjang sebelum dipakai tim.
 - Migrasi data dari versi HTML lama (claude.ai) belum otomatis; perlu ekspor/impor terpisah bila diperlukan.
 - Foto disimpan di database (`bytea`) — cukup untuk skala tim audit. Bila volume foto menjadi sangat besar, pindahkan ke object storage (S3/MinIO) — `ponytail:` catat titik ini.

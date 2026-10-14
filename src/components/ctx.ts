@@ -15,6 +15,7 @@ export interface AppCtxType {
   areas: { id: string; name: string }[];
   access: { prod: boolean; auditor: boolean; admin: boolean };
   envManaged: { prod: boolean; auditor: boolean; admin: boolean };
+  scopePins: Record<string, boolean>;
   setup: boolean;
   audits: Audit[];
   daudits: DeptAudit[];
