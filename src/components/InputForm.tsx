@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from './ctx';
 import { IconChevron } from './icons';
@@ -16,6 +16,23 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
   const [dform, setDform] = useState<Draft>(() => loadDraft(DKEYD, newDForm));
   const [bad, setBad] = useState<Record<number, boolean>>({});
   const [busy, setBusy] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Beri ruang bawah pada konten setinggi sticky bar agar item terakhir tak tertutup (mobile).
+  useEffect(() => {
+    const set = () => {
+      const h = barRef.current?.offsetHeight || 0;
+      document.documentElement.style.setProperty('--sticky-h', h + 'px');
+    };
+    set();
+    const t = setTimeout(set, 300);
+    window.addEventListener('resize', set);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', set);
+      document.documentElement.style.removeProperty('--sticky-h');
+    };
+  }, []);
 
   const isD = mode === 'd';
   const form = isD ? dform : pform;
@@ -306,7 +323,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
         </section>
       ))}
 
-      <div className="sticky-bar">
+      <div className="sticky-bar" ref={barRef}>
         <div className="sticky-in">
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
             <div>

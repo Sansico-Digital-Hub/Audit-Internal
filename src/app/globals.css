@@ -1297,7 +1297,7 @@ textarea:focus {
 .app-content {
   display: grid;
   gap: 18px;
-  padding: 24px 24px 96px;
+  padding: 24px 24px calc(96px + var(--sticky-h, 0px));
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
@@ -1397,7 +1397,7 @@ textarea:focus {
     display: inline-flex;
   }
   .app-content {
-    padding: 16px 16px 100px;
+    padding: 16px 16px calc(100px + var(--sticky-h, 0px));
   }
 }
 
