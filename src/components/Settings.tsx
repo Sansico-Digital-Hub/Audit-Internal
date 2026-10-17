@@ -98,11 +98,16 @@ export function CustomItemsView() {
   const [et, setEt] = useState('');
   const [er, setEr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [bscope, setBscope] = useState('p');
+  const [bedit, setBedit] = useState<number | null>(null);
+  const [bt, setBt] = useState('');
+  const [br, setBr] = useState('');
 
   if (session?.role !== 'admin' && !setup)
     return <div className="card empty">Hanya admin yang bisa mengatur poin checklist.</div>;
 
   const opts = clSecOpts(catalog, scope);
+  const baseItems = bscope === 'p' ? catalog.items : catalog.units.find((u) => u.id === bscope)?.items || [];
   const list = [...catalog.custom].sort(
     (a, b) => (a.scope === 'p' ? '0' : '1' + a.scope).localeCompare(b.scope === 'p' ? '0' : '1' + b.scope) || a.n - b.n,
   );
@@ -115,6 +120,26 @@ export function CustomItemsView() {
       refresh();
     } catch {
       toast('Gagal menyimpan poin checklist.');
+    }
+    setBusy(false);
+  }
+
+  function startBaseEdit(n: number, text: string, ref: string) {
+    setBedit(n);
+    setBt(text);
+    setBr(ref);
+  }
+
+  async function saveBase() {
+    if (bedit == null) return;
+    setBusy(true);
+    try {
+      await api('/api/config/itemoverrides', { method: 'PUT', body: JSON.stringify({ scope: bscope, n: bedit, t: bt, r: br }) });
+      toast('Poin diperbarui');
+      setBedit(null);
+      refresh();
+    } catch {
+      toast('Gagal menyimpan poin.');
     }
     setBusy(false);
   }
@@ -183,6 +208,82 @@ export function CustomItemsView() {
           skor seksi = M ÷ (M + DM) × bobot, jadi poin baru ikut menentukan persentase seksi yang dipilih.
         </p>
       </div>
+      <section className="card pnl">
+        <h3>Edit poin yang sudah ada</h3>
+        <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+          Ubah teks/acuan poin bawaan. Perubahan berlaku untuk form &amp; audit berikutnya (audit lama tidak berubah).
+        </p>
+        <label className="f" style={{ maxWidth: 360 }}>
+          Untuk
+          <select
+            value={bscope}
+            onChange={(e) => {
+              setBscope(e.target.value);
+              setBedit(null);
+            }}
+          >
+            <optgroup label="Produksi">
+              <option value="p">Audit Proses Produksi</option>
+            </optgroup>
+            <optgroup label="Departemen lain">
+              {catalog.units.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.dept === u.name ? u.name : `${u.dept} · ${u.name}`}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </label>
+        <div>
+          {baseItems.map((it) => {
+            const ed = bedit === it.n;
+            return (
+              <div className="clrow" key={it.n}>
+                <div>
+                  <div>
+                    <b className="mono">{nl(it.n)}</b> {it.custom && <span className="pill na">Tambahan</span>}
+                  </div>
+                  {ed ? (
+                    <>
+                      <label className="f" style={{ marginTop: 6 }}>
+                        Poin audit
+                        <textarea value={bt} onChange={(e) => setBt(e.target.value)} />
+                      </label>
+                      <label className="f" style={{ marginTop: 6 }}>
+                        Acuan pemeriksaan (satu baris satu acuan)
+                        <textarea value={br} onChange={(e) => setBr(e.target.value)} />
+                      </label>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ marginTop: 4 }}>{it.t}</div>
+                      {it.r && <div className="muted" style={{ fontSize: 12, whiteSpace: 'pre-line' }}>{it.r}</div>}
+                    </>
+                  )}
+                </div>
+                <div className="acts">
+                  {it.custom ? (
+                    <span className="muted" style={{ fontSize: 12 }}>edit di bawah</span>
+                  ) : ed ? (
+                    <>
+                      <button className="btn sm" type="button" disabled={busy} onClick={saveBase}>
+                        Simpan
+                      </button>
+                      <button className="btn ghost sm" type="button" onClick={() => setBedit(null)}>
+                        Batal
+                      </button>
+                    </>
+                  ) : (
+                    <button className="btn ghost sm" type="button" onClick={() => startBaseEdit(it.n, it.t, it.r)}>
+                      Ubah
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
       <section className="card pnl">
         <h3>Tambah poin baru</h3>
         <div className="meta" style={{ padding: 0 }}>

@@ -22,7 +22,7 @@ export interface AppCtxType {
   loading: boolean;
   openCount: number;
   toast: (m: string) => void;
-  openPhoto: (src: string) => void;
+  openPhoto: (list: string[], index?: number) => void;
   refresh: () => void;
   logout: () => Promise<void>;
 }

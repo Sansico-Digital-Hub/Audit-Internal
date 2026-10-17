@@ -9,7 +9,9 @@ export interface Catalog {
   custom: CustomItem[];
 }
 
-export function buildCatalog(custom: CustomItem[] = []): Catalog {
+export type ItemOverrides = Record<string, Record<string, { t?: string; r?: string }>>;
+
+export function buildCatalog(custom: CustomItem[] = [], overrides: ItemOverrides = {}): Catalog {
   const items: Item[] = SEED_ITEMS.map((i) => ({ ...i }));
   const sections: Section[] = PRODUCT_SECTIONS.map((s) => ({ ...s, extra: [] as number[] }));
   const units: Unit[] = SEED_UNITS.map((u) => ({
@@ -35,7 +37,17 @@ export function buildCatalog(custom: CustomItem[] = []): Catalog {
     }
   });
 
-  return { items, units, sections, custom };
+  const applyOv = (scope: string, it: Item): Item => {
+    const o = overrides?.[scope]?.[String(it.n)];
+    return o ? { ...it, t: o.t ?? it.t, r: o.r ?? it.r } : it;
+  };
+
+  return {
+    items: items.map((it) => applyOv('p', it)),
+    units: units.map((u) => ({ ...u, items: u.items.map((it) => applyOv(u.id, it)) })),
+    sections,
+    custom,
+  };
 }
 
 export function clSecOpts(catalog: Catalog, scope: string): [string, string][] {

@@ -1847,3 +1847,42 @@ textarea:focus {
   border-color: var(--blue-400);
   background: var(--blue-50);
 }
+
+/* ===== Lightbox: panah & counter ===== */
+.lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lb-nav:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+.lb-nav.prev {
+  left: 16px;
+}
+.lb-nav.next {
+  right: 16px;
+}
+.lb-count {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 4px 12px;
+  border-radius: 99px;
+}

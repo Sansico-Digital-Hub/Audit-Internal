@@ -27,6 +27,7 @@ interface ConfigResp {
   access: { prod: boolean; auditor: boolean; admin: boolean };
   envManaged: { prod: boolean; auditor: boolean; admin: boolean };
   scopePins: Record<string, boolean>;
+  itemOverrides?: import('@/lib/catalog').ItemOverrides;
   areas: { id: string; name: string }[];
   custom: CustomItem[];
 }
@@ -51,7 +52,19 @@ export default function AppProvider({ initialSession, children }: { initialSessi
   const dauditsArr = daudits ?? [];
 
   const [toastMsg, setToastMsg] = useState<{ m: string; k: number } | null>(null);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<{ list: string[]; i: number } | null>(null);
+  const openPhoto = (list: string[], index = 0) => setPhoto({ list, i: index });
+
+  useEffect(() => {
+    if (!photo) return;
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') setPhoto((p) => (p ? { ...p, i: (p.i - 1 + p.list.length) % p.list.length } : p));
+      if (e.key === 'ArrowRight') setPhoto((p) => (p ? { ...p, i: (p.i + 1) % p.list.length } : p));
+      if (e.key === 'Escape') setPhoto(null);
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [photo]);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -70,7 +83,7 @@ export default function AppProvider({ initialSession, children }: { initialSessi
     }
   }, [cfg, router]);
 
-  const catalog = useMemo(() => buildCatalog(cfg?.custom || []), [cfg?.custom]);
+  const catalog = useMemo(() => buildCatalog(cfg?.custom || [], cfg?.itemOverrides || {}), [cfg?.custom, cfg?.itemOverrides]);
   const areas = cfg?.areas ?? [];
   const scoped = session?.role === 'prod';
   const openCount = openCounts(
@@ -106,7 +119,7 @@ export default function AppProvider({ initialSession, children }: { initialSessi
         loading,
         openCount,
         toast,
-        openPhoto: setPhoto,
+        openPhoto,
         refresh,
         logout,
       }}
@@ -119,7 +132,34 @@ export default function AppProvider({ initialSession, children }: { initialSessi
       )}
       {photo && (
         <div className="lb" onClick={() => setPhoto(null)}>
-          <img src={photo} alt="Foto bukti" />
+          <img src={photo.list[photo.i]} alt="Foto bukti" onClick={(e) => e.stopPropagation()} />
+          {photo.list.length > 1 && (
+            <>
+              <button
+                className="lb-nav prev"
+                aria-label="Foto sebelumnya"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPhoto((p) => (p ? { ...p, i: (p.i - 1 + p.list.length) % p.list.length } : p));
+                }}
+              >
+                ‹
+              </button>
+              <button
+                className="lb-nav next"
+                aria-label="Foto berikutnya"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPhoto((p) => (p ? { ...p, i: (p.i + 1) % p.list.length } : p));
+                }}
+              >
+                ›
+              </button>
+              <span className="lb-count">
+                {photo.i + 1} / {photo.list.length}
+              </span>
+            </>
+          )}
         </div>
       )}
     </AppCtx.Provider>

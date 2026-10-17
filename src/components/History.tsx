@@ -428,8 +428,14 @@ export default function History({
                         </div>
                         {(f.photos || []).length > 0 && (
                           <div className="ph-list" style={{ marginTop: 6 }}>
-                            {(f.photos || []).map((p) => (
-                              <img key={p} className="thumb" src={`/api/photos/${p}`} alt="Foto temuan" onClick={() => openPhoto(`/api/photos/${p}`)} />
+                            {(f.photos || []).map((p, k) => (
+                              <img
+                                key={p}
+                                className="thumb"
+                                src={`/api/photos/${p}`}
+                                alt="Foto temuan"
+                                onClick={() => openPhoto((f.photos || []).map((x) => `/api/photos/${x}`), k)}
+                              />
                             ))}
                           </div>
                         )}

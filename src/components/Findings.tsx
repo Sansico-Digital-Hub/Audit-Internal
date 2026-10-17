@@ -194,16 +194,18 @@ export default function Findings({
               </label>
             </div>
           );
-        const strip = (ids?: string[], emptyText = 'Tidak ada foto') =>
-          ids && ids.length ? (
+        const strip = (ids?: string[], emptyText = 'Tidak ada foto') => {
+          const urls = (ids || []).map((p) => `/api/photos/${p}`);
+          return urls.length ? (
             <div className="ph-list">
-              {ids.map((p) => (
-                <img key={p} className="thumb" src={`/api/photos/${p}`} alt="Foto bukti temuan" onClick={() => openPhoto(`/api/photos/${p}`)} />
+              {urls.map((u, k) => (
+                <img key={u} className="thumb" src={u} alt="Foto bukti temuan" onClick={() => openPhoto(urls, k)} />
               ))}
             </div>
           ) : (
             <span className="muted" style={{ fontSize: 12 }}>{emptyText}</span>
           );
+        };
         return (
           <article className="card fcard" key={x.src + x.aid + x.n}>
             <div className="hd">

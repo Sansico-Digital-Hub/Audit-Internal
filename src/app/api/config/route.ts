@@ -14,6 +14,7 @@ export async function GET() {
     const scopePins = (await getScopePins()) || {};
     const areasCfg = await getConfig<AreasConfig>('areas');
     const customCfg = await getConfig<CustomConfig>('customitems');
+    const overrides = await getConfig<Record<string, Record<string, { t?: string; r?: string }>>>('itemoverrides');
 
     const stored = (areasCfg?.list || []).filter((a) => a && a.id && typeof a.name === 'string');
     const areas = stored.length
@@ -34,6 +35,7 @@ export async function GET() {
         admin: !!envPin('admin'),
       },
       scopePins: Object.fromEntries(Object.entries(scopePins).map(([k, v]) => [k, !!v])),
+      itemOverrides: overrides || {},
       areas,
       custom: customCfg?.list || [],
     });
