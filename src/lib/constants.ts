@@ -9,7 +9,7 @@ export const PRODUCT_SECTIONS: Section[] = [
 
 export const STD = 95;
 export const WARN = 85;
-export const MAXPH = 4;
+export const MAXPH = 6;
 export const MAXPH_ACTION = 8;
 export const CUSTOM_BASE = 1000;
 

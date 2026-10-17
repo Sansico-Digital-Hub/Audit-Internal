@@ -64,6 +64,8 @@ export default function Findings({
   else if (filters.fstatus === 'overdue') list = list.filter((x) => (x.f.status || 'Open') !== 'Closed' && x.f.due && x.f.due < t);
   else if (filters.fstatus === 'closed') list = list.filter((x) => x.f.status === 'Closed');
   if (filters.farea !== 'all') list = list.filter((x) => x.areaId === filters.farea);
+  if (filters.from) list = list.filter((x) => x.date >= filters.from);
+  if (filters.to) list = list.filter((x) => x.date <= filters.to);
 
   const areaOpts: [string, string][] = [];
   if (role === 'prod') {
@@ -151,6 +153,14 @@ export default function Findings({
               </option>
             ))}
           </select>
+        </label>
+        <label className="f">
+          Dari
+          <input type="date" value={filters.from} onChange={(e) => filters.set({ from: e.target.value, preset: 'custom' })} />
+        </label>
+        <label className="f">
+          Sampai
+          <input type="date" value={filters.to} onChange={(e) => filters.set({ to: e.target.value, preset: 'custom' })} />
         </label>
         {role !== 'prod' && (
           <button

@@ -1831,3 +1831,19 @@ textarea:focus {
   grid-column: 1 / -1;
   justify-self: start;
 }
+
+/* ===== Drop zone foto (input audit) ===== */
+.ph-drop {
+  display: grid;
+  gap: 8px;
+  border: 2px dashed var(--line);
+  border-radius: var(--r-md);
+  padding: 10px;
+  min-height: 62px;
+  align-content: center;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.ph-drop.drag {
+  border-color: var(--blue-400);
+  background: var(--blue-50);
+}

@@ -16,6 +16,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
   const [dform, setDform] = useState<Draft>(() => loadDraft(DKEYD, newDForm));
   const [bad, setBad] = useState<Record<number, boolean>>({});
   const [busy, setBusy] = useState(false);
+  const [dragN, setDragN] = useState<number | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
 
   // Beri ruang bawah pada konten setinggi sticky bar agar item terakhir tak tertutup (mobile).
@@ -41,7 +42,11 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
   const sections: Section[] = isD ? unitSecs(unit) : catalog.sections;
   const allItems: Item[] = isD ? unit.items : catalog.items;
   const items = allItems.filter((i) => !i.off);
-  const c = calc(form.ans, sections);
+  // Default setiap poin = M (hijau) sampai user mengubahnya.
+  const ans: Record<string, Answer> = {};
+  items.forEach((i) => (ans[i.n] = 'M'));
+  Object.assign(ans, form.ans);
+  const c = calc(ans, sections);
   const inSec = (i: Item, s: Section) => (i.n >= s.from && i.n <= s.to) || (s.extra || []).includes(i.n);
 
   const key = isD ? DKEYD : DKEY;
@@ -85,7 +90,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
     }
     const miss: number[] = [];
     items.forEach((i) => {
-      const a = form.ans[i.n];
+      const a = ans[i.n];
       const badItem = !a || (a === 'DM' && (!(form.find[i.n] || '').trim() || !(form.photos[i.n] || []).length));
       if (badItem) miss.push(i.n);
     });
@@ -96,10 +101,10 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
       toast(`${miss.length} poin belum lengkap. DM wajib temuan dan foto (nomor ${miss.slice(0, 6).join(', ')}${miss.length > 6 ? '…' : ''}).`);
       return;
     }
-    const cc = calc(form.ans, sections);
+    const cc = calc(ans, sections);
     const finds: Record<string, { finding: string; plan: string; pic: string; due: string; status: string; photos: string[] }> = {};
     items.forEach((i) => {
-      if (form.ans[i.n] === 'DM') finds[i.n] = { finding: (form.find[i.n] || '').trim(), plan: '', pic: '', due: '', status: 'Open', photos: [] };
+      if (ans[i.n] === 'DM') finds[i.n] = { finding: (form.find[i.n] || '').trim(), plan: '', pic: '', due: '', status: 'Open', photos: [] };
     });
 
     const id = isD
@@ -133,7 +138,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
           date: form.date,
           auditor: form.auditor.trim(),
           auditee: form.auditee.trim(),
-          ans: form.ans,
+          ans,
           finds,
           score: { total: +cc.total!.toFixed(2), dm: cc.dm, cats: cc.secs.map((s) => +(s.pts ?? 0).toFixed(2)) },
           createdAt: now(),
@@ -146,7 +151,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
           areaName: areas.find((a) => a.id === form.areaId)?.name,
           auditor: form.auditor.trim(),
           auditee: form.auditee.trim(),
-          ans: form.ans,
+          ans,
           finds,
           score: {
             total: +cc.total!.toFixed(2),
@@ -253,7 +258,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
             </div>
           </div>
           {items.filter((i) => inSec(i, s)).map((i) => {
-            const a: Answer | '' = form.ans[i.n] || '';
+            const a = ans[i.n];
             return (
               <div className={'item' + (bad[i.n] ? ' bad-field' : '')} key={i.n} id={'it-' + i.n}>
                 <div className="item-head">
@@ -294,16 +299,32 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
                   </label>
                   <div className="ph">
                     <div className="f" style={{ display: 'block' }}>Foto bukti temuan (wajib, maks {MAXPH})</div>
-                    <div className="ph-list">
-                      {(form.photos[i.n] || []).map((u, k) => (
-                        <div className="ph-item" key={k}>
-                          <img className="thumb" src={u} alt={'Foto temuan ' + i.n} />
-                          <button type="button" className="ph-x" aria-label="Hapus foto" onClick={() => removePhoto(i.n, k)}>
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                      {!(form.photos[i.n] || []).length && <span className="muted" style={{ fontSize: 12 }}>Belum ada foto</span>}
+                    <div
+                      className={'ph-drop' + (dragN === i.n ? ' drag' : '')}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragN(i.n);
+                      }}
+                      onDragLeave={() => setDragN((d) => (d === i.n ? null : d))}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragN(null);
+                        addPhotos(i.n, e.dataTransfer.files);
+                      }}
+                    >
+                      <div className="ph-list">
+                        {(form.photos[i.n] || []).map((u, k) => (
+                          <div className="ph-item" key={k}>
+                            <img className="thumb" src={u} alt={'Foto temuan ' + i.n} />
+                            <button type="button" className="ph-x" aria-label="Hapus foto" onClick={() => removePhoto(i.n, k)}>
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      {!(form.photos[i.n] || []).length && (
+                        <span className="muted" style={{ fontSize: 12 }}>Tarik &amp; lepas foto ke sini, atau pakai tombol di bawah</span>
+                      )}
                     </div>
                     <div className="ph-btns">
                       <label className="btn ghost sm">
