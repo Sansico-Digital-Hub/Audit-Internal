@@ -43,6 +43,19 @@ export default function Login() {
       });
   }, []);
 
+  // Reset saat halaman dipulihkan dari cache browser (back/forward) agar tombol tak "macet".
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setBusy(false);
+        setPin('');
+        setMsg('');
+      }
+    };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
+
   const setup = !!cfg?.setup;
   const areas = cfg?.areas ?? [];
   const sel = setup ? 'admin' : lrole;
@@ -60,6 +73,7 @@ export default function Login() {
         body: JSON.stringify({ role: sel, pin, area }),
       });
       const isDept = /^d/.test(r.area || '');
+      setBusy(false);
       router.replace(defaultPath(r.role, isDept));
       router.refresh();
     } catch (e) {
@@ -125,7 +139,7 @@ export default function Login() {
               pattern="[0-9]*"
               autoComplete="off"
               value={pin}
-              placeholder="••••••"
+              placeholder="Masukkan PIN"
               onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') doLogin();

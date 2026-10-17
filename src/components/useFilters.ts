@@ -24,7 +24,7 @@ export function useFilters(): Filters {
     gran: 'week' as 'week' | 'month',
     dunit: 'all',
     trendArea: 'all',
-    fstatus: 'open',
+    fstatus: 'all',
     farea: 'all',
   });
   return { ...f, set: (patch) => setF((prev) => ({ ...prev, ...patch })) };
