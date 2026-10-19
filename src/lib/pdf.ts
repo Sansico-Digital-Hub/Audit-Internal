@@ -1,5 +1,4 @@
-import { STD } from './constants';
-import { dateLabel } from './format';
+import { STD, WARN } from './constants';
 
 export interface PdfPart {
   name: string;
@@ -7,18 +6,29 @@ export interface PdfPart {
   w: number;
 }
 
-export interface PdfPerformance {
-  name: string;
+export interface PdfBar {
+  key: string;
   total: number;
-  date: string;
   parts: PdfPart[];
+}
+
+export interface PdfGroup {
+  name: string;
+  bars: PdfBar[];
+  latest: number | null;
+}
+
+export interface PdfWeekLabel {
+  key: string;
+  label: string;
 }
 
 export interface PdfReport {
   title: string;
   scope: string;
   period: string;
-  performance: PdfPerformance[];
+  weekLabels: PdfWeekLabel[];
+  groups: PdfGroup[];
   weeks: { lab: string; v: number }[];
   latest: { name: string; v: number; date: string }[];
   legend: string[];
@@ -28,8 +38,9 @@ export interface PdfReport {
 
 const PALETTE = ['#2b5f9e', '#b45f06', '#6b4c98', '#1f7a6e', '#0f766e', '#be123c', '#7c3aed', '#0891b2', '#4d7c0f', '#a16207', '#4338ca', '#9d174d'];
 
-const A4 = { w: 595.28, h: 841.89 };
-const M = 34;
+// A4 landscape, satu halaman.
+const A4 = { w: 841.89, h: 595.28 };
+const M = 18;
 const RIGHT = A4.w - M;
 
 const clean = (s: string) => s.replace(/[\u2013\u2014]/g, '-').replace(/\u2026/g, '...').replace(/[^\x20-\x7E\xA0-\xFF]/g, '?');
@@ -40,24 +51,26 @@ function hexColor(hex: string) {
 }
 
 export async function buildPdf(report: PdfReport) {
-  const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+  const { PDFDocument, StandardFonts, rgb, degrees } = await import('pdf-lib');
   const doc = await PDFDocument.create();
   const page = doc.addPage([A4.w, A4.h]);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const ink = rgb(0.08, 0.09, 0.08);
   const muted = rgb(0.39, 0.45, 0.54);
-  const line = rgb(0.9, 0.92, 0.95);
+  const grid = rgb(0.86, 0.89, 0.93);
+  const blue = rgb(0.118, 0.373, 0.62);
   const good = rgb(0.086, 0.639, 0.29);
   const bad = rgb(0.937, 0.267, 0.267);
   const warn = rgb(0.918, 0.702, 0.031);
+  const pink = rgb(1, 0.91, 0.93);
   const color = (hex: string) => {
     const c = hexColor(hex);
     return rgb(c.r, c.g, c.b);
   };
 
-  const text = (s: string, x: number, y: number, size: number, f = font, c = ink) =>
-    page.drawText(clean(s), { x, y, size, font: f, color: c });
+  const text = (s: string, x: number, y: number, size: number, f = font, c = ink, rotate?: number) =>
+    page.drawText(clean(s), { x, y, size, font: f, color: c, ...(rotate ? { rotate: degrees(rotate) } : {}) });
 
   const clip = (s: string, maxW: number, size: number, f = font) => {
     const raw = clean(s);
@@ -70,140 +83,188 @@ export async function buildPdf(report: PdfReport) {
   const rect = (x: number, y: number, w: number, h: number, c: ReturnType<typeof rgb>) =>
     page.drawRectangle({ x, y, width: Math.max(0, w), height: Math.max(0, h), color: c });
 
-  const hline = (y: number, c = line, thickness = 1) =>
-    page.drawLine({ start: { x: M, y }, end: { x: RIGHT, y }, thickness, color: c });
+  // Banner judul
+  page.drawRectangle({ x: M, y: 559, width: RIGHT - M, height: 22, color: blue });
+  const titleSize = (() => {
+    let s = 13;
+    while (s > 9 && bold.widthOfTextAtSize(clean(report.title), s) > RIGHT - M - 24) s -= 0.5;
+    return s;
+  })();
+  const tw = bold.widthOfTextAtSize(clean(report.title), titleSize);
+  text(report.title, (A4.w - tw) / 2, 566, titleSize, bold, rgb(1, 1, 1));
 
-  // Header
-  text('AUDIT INTERNAL', M, 806, 7.5, bold, muted);
-  text(report.title, M, 786, 18, bold, ink);
-  text(report.scope, M, 769, 8.5, font, ink);
-  text(report.period, M, 757, 7.5, font, muted);
-  const stamp = new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
-  text('Dibuat ' + stamp, RIGHT - font.widthOfTextAtSize(clean('Dibuat ' + stamp), 7.5), 806, 7.5, font, muted);
-  hline(750);
-
-  // Section 1: Performance Process Audit
-  text('Performance Process Audit', M, 735, 10.5, bold, ink);
-  text('Komponen dari audit terbaru tiap ' + (report.latestTitle?.toLowerCase().includes('unit') ? 'unit' : 'area'), RIGHT - 190, 735, 7.5, font, muted);
-  let ly = 721;
+  // Legend komponen + standar
   let lx = M;
-  report.legend.forEach((name, i) => {
-    const w = 9 + font.widthOfTextAtSize(clean(name), 7.5) + 12;
-    if (lx + w > RIGHT) {
+  let ly = 549;
+  report.legend.slice(0, 6).forEach((name, i) => {
+    const w = 9 + font.widthOfTextAtSize(clean(name), 7) + 12;
+    if (lx + w > RIGHT - 250) {
       lx = M;
-      ly -= 10;
+      ly -= 9;
     }
     rect(lx, ly - 1.5, 6, 6, color(PALETTE[i % PALETTE.length]));
-    text(name, lx + 9, ly, 7.5, font, muted);
+    text(name, lx + 9, ly, 7, font, muted);
     lx += w;
   });
-
-  const perf = report.performance;
-  const perfTop = ly - 12;
-  const maxRows = perf.length ? Math.min(perf.length, 24) : 0;
-  const rowH = maxRows ? Math.max(8, Math.min(14, (perfTop - 468) / maxRows)) : 12;
-  const barX = 152;
-  const barW = 318;
-  if (!maxRows) {
-    text('Belum ada audit pada rentang tanggal ini.', M, perfTop - 10, 8, font, muted);
+  if (report.legend.length > 6) {
+    text(`+${report.legend.length - 6}`, lx + 2, ly, 6.5, font, muted);
+    lx += 16;
   }
-  perf.slice(0, maxRows).forEach((r, i) => {
-    const y = perfTop - i * rowH;
-    text(clip(r.name, 110, 8), M, y, 8, font, ink);
-    rect(barX, y - 1, barW, Math.max(4, rowH - 5), rgb(0.94, 0.96, 0.98));
-    let cx = barX;
-    const total = Math.max(0, Math.min(100, r.total));
-    r.parts.forEach((p, k) => {
-      const w = (Math.max(0, Math.min(100, p.pts)) / 100) * barW;
-      if (w <= 0) return;
-      rect(cx, y - 1, w, Math.max(4, rowH - 5), color(PALETTE[k % PALETTE.length]));
-      cx += w;
-    });
-    text(total.toFixed(1), barX + barW + 6, y, 8, bold, total >= STD ? good : bad);
-    text(dateLabel(r.date), 522, y, 7, font, muted);
+  page.drawLine({
+    start: { x: lx + 4, y: ly + 2 },
+    end: { x: lx + 22, y: ly + 2 },
+    thickness: 1.2,
+    color: warn,
+    dashArray: [3, 2],
   });
-  const perfBottom = maxRows ? perfTop - maxRows * rowH : perfTop - 20;
-  if (perf.length > maxRows) text(`+${perf.length - maxRows} lainnya`, M, perfBottom + 2, 7, font, muted);
+  text('STANDARD ' + STD, lx + 27, ly, 7, font, muted);
+  const rightInfo = report.scope + (report.period ? ' · ' + report.period : '');
+  text(clip(rightInfo, 250, 7), RIGHT - font.widthOfTextAtSize(clip(rightInfo, 250, 7), 7), ly, 7, font, muted);
 
-  // Section 2: Overall score per week
-  const s2Head = Math.max(perfBottom - 20, 366);
-  hline(s2Head + 14);
-  text(report.weeklyTitle || 'Overall score per minggu', M, s2Head, 10.5, bold, ink);
-  text('Standar ' + STD, RIGHT - font.widthOfTextAtSize('Standar ' + STD, 7.5), s2Head, 7.5, font, muted);
-  const weeks = report.weeks.slice(-12);
-  const chartTop = s2Head - 10;
-  const chartBottom = chartTop - 92;
-  if (!weeks.length) {
-    text('Belum ada audit pada rentang tanggal ini.', M, chartTop - 16, 8, font, muted);
-  } else {
-    for (let v = 60; v <= 100; v += 10) {
-      const y = chartBottom + ((v - 60) / 40) * 92;
-      page.drawLine({ start: { x: 48, y }, end: { x: RIGHT, y }, thickness: 0.4, color: rgb(0.86, 0.89, 0.93) });
-      text(String(v), 40 - font.widthOfTextAtSize(String(v), 6.5), y - 2, 6.5, font, muted);
+  // Chart utama: stacked bar per area/unit, per periode
+  const plotTop = ly - 14;
+  const plotBottom = 342;
+  const plotLeft = 48;
+  const plotRight = RIGHT - 8;
+  const plotH = plotTop - plotBottom;
+  const groups = report.groups;
+  const barsPerGroup = Math.max(1, report.weekLabels.length);
+  const groupW = groups.length ? (plotRight - plotLeft) / groups.length : plotRight - plotLeft;
+  const inner = Math.max(8, groupW - 8);
+  const barW = Math.max(3, Math.min(18, (inner - (barsPerGroup - 1) * 2) / barsPerGroup));
+  const barGap = 2;
+
+  for (let v = 0; v <= 100; v += 20) {
+    const y = plotBottom + (v / 100) * plotH;
+    page.drawLine({ start: { x: plotLeft, y }, end: { x: plotRight, y }, thickness: 0.4, color: grid });
+    text(String(v), plotLeft - 5 - font.widthOfTextAtSize(String(v), 5.5), y - 2, 5.5, font, muted);
+  }
+  const y = (v: number) => plotBottom + (Math.max(0, Math.min(100, v)) / 100) * plotH;
+
+  if (!groups.length) {
+    text('Belum ada audit pada rentang tanggal ini.', plotLeft, plotBottom + plotH / 2, 8, font, muted);
+  }
+  groups.forEach((g, gi) => {
+    const gx = plotLeft + gi * groupW;
+    if (g.latest != null && g.latest < WARN) {
+      rect(gx + 1, plotBottom, groupW - 2, plotH, pink);
     }
-    const y = (v: number) => chartBottom + ((Math.max(60, Math.min(100, v)) - 60) / 40) * 92;
-    const slot = (RIGHT - 54) / weeks.length;
-    const bw = Math.max(6, Math.min(28, slot - 6));
-    weeks.forEach((w, i) => {
-      const cx = 54 + i * slot + slot / 2;
-      const yy = y(w.v);
-      rect(cx - bw / 2, chartBottom, bw, yy - chartBottom, w.v >= STD ? good : bad);
-      text(w.v.toFixed(1), cx - font.widthOfTextAtSize(w.v.toFixed(1), 7) / 2, yy + 3, 7, bold, ink);
-      text(w.lab, cx - font.widthOfTextAtSize(w.lab, 6.5) / 2, chartBottom - 12, 6.5, font, muted);
+    const totalW = barsPerGroup * barW + (barsPerGroup - 1) * barGap;
+    const startX = gx + (groupW - totalW) / 2;
+    const byKey = new Map(g.bars.map((b) => [b.key, b]));
+    report.weekLabels.forEach((w, wi) => {
+      const bar = byKey.get(w.key);
+      const bx = startX + wi * (barW + barGap);
+      const cx = bx + barW / 2;
+      text(w.label, cx - 2, plotBottom - 4, 5.2, font, muted, -90);
+      if (bar) {
+        let cy = plotBottom;
+        bar.parts.forEach((p, pi) => {
+          const h = (Math.max(0, Math.min(100, p.pts)) / 100) * plotH;
+          if (h <= 0) return;
+          rect(bx, cy, barW, h, color(PALETTE[pi % PALETTE.length]));
+          cy += h;
+        });
+        text(bar.total.toFixed(1), cx - font.widthOfTextAtSize(bar.total.toFixed(1), 5.2) / 2, y(bar.total) + 2, 5.2, bold, ink);
+      }
     });
-    const sy = y(STD);
-    page.drawLine({
-      start: { x: 48, y: sy },
-      end: { x: RIGHT, y: sy },
-      thickness: 1,
-      color: warn,
-      dashArray: [3, 3],
-    });
+    const nm = clip(g.name, 58, 5.4, bold);
+    text(nm, gx + groupW / 2 - 2, plotBottom - 28, 5.4, bold, ink, -45);
+  });
+  // garis standar pada chart utama
+  page.drawLine({
+    start: { x: plotLeft, y: y(STD) },
+    end: { x: plotRight, y: y(STD) },
+    thickness: 1,
+    color: warn,
+    dashArray: [3, 3],
+  });
+
+  // Panel bawah
+  const panelY = 26;
+  const panelH = 234;
+  const gap = 12;
+  const panelW = (RIGHT - M - gap) / 2;
+  const panelTop = panelY + panelH;
+  const drawPanel = (x: number, title: string) => {
+    page.drawRectangle({ x, y: panelY, width: panelW, height: panelH, borderColor: grid, borderWidth: 0.8, color: rgb(1, 1, 1) });
+    text(title, x + 10, panelTop - 13, 8, bold, ink);
+  };
+  const chartBottom = 80;
+  const chartTop = panelTop - 24;
+
+  // Kiri: overall score per minggu
+  const leftX = M;
+  drawPanel(leftX, report.weeklyTitle || 'OVERALL SCORE');
+  const lPlotLeft = leftX + 30;
+  const lPlotRight = leftX + panelW - 12;
+  const lSlot = report.weeks.length ? (lPlotRight - lPlotLeft) / report.weeks.length : lPlotRight - lPlotLeft;
+  const lBarW = Math.max(3, Math.min(13, lSlot * 0.68));
+  for (let v = 0; v <= 100; v += 20) {
+    const yy = chartBottom + (v / 100) * (chartTop - chartBottom);
+    page.drawLine({ start: { x: lPlotLeft, y: yy }, end: { x: lPlotRight, y: yy }, thickness: 0.4, color: grid });
+    text(String(v), lPlotLeft - 5 - font.widthOfTextAtSize(String(v), 5.5), yy - 2, 5.5, font, muted);
   }
-  const s2Bottom = chartBottom - 24;
-
-  // Section 3: Latest score per area/unit
-  const s3Head = s2Bottom - 22;
-  hline(s3Head + 14);
-  text(report.latestTitle || 'Skor terbaru per area', M, s3Head, 10.5, bold, ink);
-  text('Standar ' + STD, RIGHT - font.widthOfTextAtSize('Standar ' + STD, 7.5), s3Head, 7.5, font, muted);
-  const latest = report.latest;
-  const lTop = s3Head - 10;
-  const lRows = latest.length ? Math.min(latest.length, 24) : 0;
-  const lH = lRows ? Math.max(8, Math.min(14, (lTop - 48) / lRows)) : 12;
-  if (!lRows) {
-    text('Belum ada audit pada rentang tanggal ini.', M, lTop - 10, 8, font, muted);
-  } else {
-    const lBarX = 160;
-    const lBarW = 300;
-    latest.slice(0, lRows).forEach((r, i) => {
-      const y = lTop - i * lH;
-      text(clip(r.name, 118, 8), M, y, 8, font, ink);
-      const v = Math.max(0, Math.min(100, r.v));
-      rect(lBarX, y - 1, lBarW, Math.max(4, lH - 5), rgb(0.94, 0.96, 0.98));
-      rect(lBarX, y - 1, (v / 100) * lBarW, Math.max(4, lH - 5), v >= STD ? good : bad);
-      text(v.toFixed(1), lBarX + lBarW + 6, y, 8, bold, v >= STD ? good : bad);
-      text(dateLabel(r.date), 522, y, 7, font, muted);
-    });
-    const sx = lBarX + (STD / 100) * lBarW;
-    page.drawLine({
-      start: { x: sx, y: lTop + 4 },
-      end: { x: sx, y: lTop - lRows * lH + 2 },
-      thickness: 1,
-      color: warn,
-      dashArray: [3, 3],
-    });
-    if (latest.length > lRows) text(`+${latest.length - lRows} lainnya`, M, lTop - lRows * lH - 2, 7, font, muted);
+  const lY = (v: number) => chartBottom + (Math.max(0, Math.min(100, v)) / 100) * (chartTop - chartBottom);
+  if (!report.weeks.length) {
+    text('Belum ada data.', lPlotLeft + 6, chartBottom + 40, 7, font, muted);
   }
+  report.weeks.slice(-24).forEach((w, i) => {
+    const cx = lPlotLeft + i * lSlot + lSlot / 2;
+    const top = lY(w.v);
+    rect(cx - lBarW / 2, chartBottom, lBarW, top - chartBottom, w.v >= STD ? good : bad);
+    const label = w.lab;
+    text(label, cx + 2, chartBottom - 3, 5, font, muted, -90);
+    if (report.weeks.length <= 12) text(w.v.toFixed(0), cx - font.widthOfTextAtSize(w.v.toFixed(0), 5) / 2, top + 2, 5, bold, ink);
+  });
+  page.drawLine({
+    start: { x: lPlotLeft, y: lY(STD) },
+    end: { x: lPlotRight, y: lY(STD) },
+    thickness: 0.9,
+    color: warn,
+    dashArray: [3, 3],
+  });
+  rect(leftX + 10, 33, 7, 7, good);
+  text('Overall Score', leftX + 20, 34, 6.5, font, muted);
+  page.drawLine({ start: { x: leftX + 92, y: 36 }, end: { x: leftX + 110, y: 36 }, thickness: 1, color: warn, dashArray: [3, 2] });
+  text('Standard ' + STD, leftX + 114, 34, 6.5, font, muted);
 
-  text('Audit Internal - Process Audit Checklist', M, 20, 7, font, muted);
-  const pageCount = '1 / 1';
-  text(pageCount, RIGHT - font.widthOfTextAtSize(pageCount, 7), 20, 7, font, muted);
+  // Kanan: skor terbaru per area/unit
+  const rightX = M + panelW + gap;
+  drawPanel(rightX, report.latestTitle || 'SKOR TERBARU PER AREA');
+  const rPlotLeft = rightX + 30;
+  const rPlotRight = rightX + panelW - 12;
+  const latest = report.latest.slice(0, 24);
+  const rSlot = latest.length ? (rPlotRight - rPlotLeft) / latest.length : rPlotRight - rPlotLeft;
+  const rBarW = Math.max(3, Math.min(18, rSlot * 0.66));
+  for (let v = 0; v <= 100; v += 20) {
+    const yy = chartBottom + (v / 100) * (chartTop - chartBottom);
+    page.drawLine({ start: { x: rPlotLeft, y: yy }, end: { x: rPlotRight, y: yy }, thickness: 0.4, color: grid });
+    text(String(v), rPlotLeft - 5 - font.widthOfTextAtSize(String(v), 5.5), yy - 2, 5.5, font, muted);
+  }
+  const rY = (v: number) => chartBottom + (Math.max(0, Math.min(100, v)) / 100) * (chartTop - chartBottom);
+  if (!latest.length) {
+    text('Belum ada data.', rPlotLeft + 6, chartBottom + 40, 7, font, muted);
+  }
+  latest.forEach((r, i) => {
+    const cx = rPlotLeft + i * rSlot + rSlot / 2;
+    const top = rY(r.v);
+    rect(cx - rBarW / 2, chartBottom, rBarW, top - chartBottom, r.v >= STD ? good : bad);
+    text(clip(r.name, 62, 5, font), cx + 2, chartBottom - 3, 5, font, muted, -45);
+    text(r.v.toFixed(0), cx - font.widthOfTextAtSize(r.v.toFixed(0), 5) / 2, top + 2, 5, bold, ink);
+  });
+  page.drawLine({
+    start: { x: rPlotLeft, y: rY(STD) },
+    end: { x: rPlotRight, y: rY(STD) },
+    thickness: 0.9,
+    color: warn,
+    dashArray: [3, 3],
+  });
 
-  // Kontrak fitur: PDF harus tetap 1 halaman A4.
+  // Kontrak fitur: PDF harus tetap 1 halaman A4 landscape.
   const first = doc.getPage(0);
   if (doc.getPageCount() !== 1 || first.getWidth() !== A4.w || first.getHeight() !== A4.h) {
-    throw new Error('PDF harus 1 halaman A4.');
+    throw new Error('PDF harus 1 halaman A4 landscape.');
   }
 
   return doc.save();

@@ -36,6 +36,7 @@ export default function Login({ initialExpired = false }: { initialExpired?: boo
   const [installBusy, setInstallBusy] = useState(false);
   const [installed, setInstalled] = useState(false);
   const [installHelp, setInstallHelp] = useState(false);
+  const [hideApp, setHideApp] = useState(false);
 
   useEffect(() => {
     fetch('/api/config')
@@ -110,6 +111,29 @@ export default function Login({ initialExpired = false }: { initialExpired?: boo
     };
   }, []);
 
+  // Card unduh yang sudah ditutup tidak muncul lagi selama sesi browser ini.
+  useEffect(() => {
+    let hidden = false;
+    try {
+      hidden = sessionStorage.getItem('audit:app-card') === 'hidden';
+    } catch {
+      /* ignore */
+    }
+    const raf = hidden ? requestAnimationFrame(() => setHideApp(true)) : 0;
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  function closeApp() {
+    setHideApp(true);
+    try {
+      sessionStorage.setItem('audit:app-card', 'hidden');
+    } catch {
+      /* ignore */
+    }
+  }
+
   async function installApp() {
     if (installed) return;
     if (!installEvt) {
@@ -162,6 +186,32 @@ export default function Login({ initialExpired = false }: { initialExpired?: boo
 
   return (
     <>
+      {!hideApp && (
+        <section className="card login app-dl">
+          <button className="app-dl-x" type="button" aria-label="Tutup card unduh aplikasi" onClick={closeApp}>
+            ×
+          </button>
+          <div className="app-dl-head">
+            <span className="app-dl-ic">
+              <IconDownload size={22} />
+            </span>
+            <div>
+              <h3>Unduh aplikasi</h3>
+              <p className="muted">Pasang Audit Internal di HP atau komputer agar bisa dibuka langsung seperti aplikasi.</p>
+            </div>
+          </div>
+          <button className="btn ghost" type="button" disabled={installed || installBusy} onClick={installApp}>
+            {installed ? 'Aplikasi sudah terpasang' : installBusy ? 'Membuka…' : 'Unduh aplikasi'}
+          </button>
+          {installHelp && !installed && (
+            <p className="muted app-dl-help">
+              Jika dialog unduh tidak muncul, buka menu browser lalu pilih <b>Install app</b> / <b>Tambahkan ke layar utama</b>.
+              Di iPhone gunakan Safari: <b>Bagikan</b> → <b>Tambah ke Layar Utama</b>.
+            </p>
+          )}
+        </section>
+      )}
+
       <section className="card login">
         <p className="muted" style={{ margin: 0 }}>
           {setup
@@ -242,27 +292,6 @@ export default function Login({ initialExpired = false }: { initialExpired?: boo
         <div className="muted" style={{ fontSize: 12 }}>
           Produksi / Departemen: lihat tren dan isi action plan area atau unit sendiri. Auditor: isi form dan lihat semua. Admin: semua fitur dan pengaturan akses.
         </div>
-      </section>
-
-      <section className="card login app-dl">
-        <div className="app-dl-head">
-          <span className="app-dl-ic">
-            <IconDownload size={22} />
-          </span>
-          <div>
-            <h3>Unduh aplikasi</h3>
-            <p className="muted">Pasang Audit Internal di HP atau komputer agar bisa dibuka langsung seperti aplikasi.</p>
-          </div>
-        </div>
-        <button className="btn ghost" type="button" disabled={installed || installBusy} onClick={installApp}>
-          {installed ? 'Aplikasi sudah terpasang' : installBusy ? 'Membuka…' : 'Unduh aplikasi'}
-        </button>
-        {installHelp && !installed && (
-          <p className="muted app-dl-help">
-            Jika dialog unduh tidak muncul, buka menu browser lalu pilih <b>Install app</b> / <b>Tambahkan ke layar utama</b>.
-            Di iPhone gunakan Safari: <b>Bagikan</b> → <b>Tambah ke Layar Utama</b>.
-          </p>
-        )}
       </section>
 
       {expired && (

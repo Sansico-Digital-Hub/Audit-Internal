@@ -176,22 +176,29 @@ export function ProdDashboard({
   async function savePdf() {
     setPdfBusy(true);
     try {
+      const pdfWeeks = bw.weeks.slice(-filters.weeks);
+      const groups = VAr.map((a) => {
+        const bars = pdfWeeks.flatMap((w) => {
+          const au = bw.map[w]?.[a.id];
+          if (!au) return [];
+          const cc = calcOf(au);
+          if (cc.total == null) return [];
+          return [{ key: w, total: cc.total, parts: cc.secs.map((s) => ({ name: s.name, pts: s.pts ?? 0, w: s.w })) }];
+        });
+        return { name: a.name, bars, latest: bars.length ? bars[bars.length - 1].total : null };
+      });
       await downloadPdf(
         {
-          title: 'Performance Process Audit',
-          scope: role === 'prod' ? unitById(scopeArea)?.name || resolveArea(scopeArea) : 'Semua area produksi',
+          title: 'PRODUCTION PERFORMANCE PROCESS AUDIT' + (lastW ? ' WE ' + dateLabel(lastW).toUpperCase() : ''),
+          scope: role === 'prod' ? (unitById(scopeArea)?.name || resolveArea(scopeArea)).toUpperCase() : 'SEMUA AREA PRODUKSI',
           period: rangeLabel(filters.from, filters.to),
-          performance: done.map((r) => ({
-            name: r.a.name,
-            total: r.au.c.total as number,
-            date: r.au.date,
-            parts: r.au.c.secs.map((s) => ({ name: s.name, pts: s.pts ?? 0, w: s.w })),
-          })),
+          weekLabels: pdfWeeks.map((w) => ({ key: w, label: wlab(w) })),
+          groups,
           weeks: ptsB.map((p) => ({ lab: p.lab, v: p.v })),
           latest: done.map((r) => ({ name: r.a.name, v: r.au.c.total as number, date: r.au.date })),
-          legend: sections.map((s) => s.name),
+          legend: sections.map((s) => `${s.name} (${+s.w.toFixed(1)})`),
         },
-        `performance-process-audit-${today()}.pdf`,
+        `production-performance-process-audit-${today()}.pdf`,
       );
     } catch {
       toast('Gagal membuat PDF.');
@@ -563,24 +570,34 @@ export function DeptDashboard({
   async function savePdf() {
     setPdfBusy(true);
     try {
+      const pdfKeys = keys.slice(-2);
+      const groups = VU.map((u) => {
+        const bars = pdfKeys.flatMap((k) => {
+          const a = cell[u.id]?.[k];
+          if (!a) return [];
+          const cc = calcOf(a);
+          if (cc.total == null) return [];
+          return [{ key: k, total: cc.total, parts: cc.secs.map((s) => ({ name: s.name, pts: s.pts ?? 0, w: s.w })) }];
+        });
+        return { name: u.name, bars, latest: bars.length ? bars[bars.length - 1].total : null };
+      });
+      const lastP = keys[keys.length - 1];
       await downloadPdf(
         {
-          title: 'Performance Process Audit',
-          scope: scoped ? unitById(session?.area || '')?.name || '' : 'Semua unit departemen',
+          title:
+            'DEPARTMENT PERFORMANCE PROCESS AUDIT' +
+            (lastP ? (gran === 'week' ? ' WE ' + pLab(lastP, 'week').toUpperCase() : ' · ' + pLab(lastP, 'month').toUpperCase()) : ''),
+          scope: scoped ? (unitById(session?.area || '')?.name || '').toUpperCase() : 'SEMUA UNIT DEPARTEMEN',
           period: rangeLabel(filters.from, filters.to),
-          performance: done.map((r) => ({
-            name: r.u.name,
-            total: r.au.c.total as number,
-            date: r.au.date,
-            parts: r.au.c.secs.map((s) => ({ name: s.name, pts: s.pts ?? 0, w: s.w })),
-          })),
+          weekLabels: pdfKeys.map((k) => ({ key: k, label: pLab(k, gran) })),
+          groups,
           weeks: pts.map((p) => ({ lab: p.lab, v: p.v })),
           latest: done.map((r) => ({ name: r.u.name, v: r.au.c.total as number, date: r.au.date })),
-          legend: scoped ? done[0]?.au.c.secs.map((s) => s.name) || [] : [],
-          weeklyTitle: gran === 'month' ? 'Overall score per bulan' : 'Overall score per minggu',
-          latestTitle: 'Skor terbaru per unit',
+          legend: scoped ? done[0]?.au.c.secs.map((s) => `${s.name} (${+s.w.toFixed(1)})`) || [] : [],
+          weeklyTitle: 'OVERALL SCORE',
+          latestTitle: 'SKOR TERBARU PER UNIT',
         },
-        `performance-process-audit-departemen-${today()}.pdf`,
+        `department-performance-process-audit-${today()}.pdf`,
       );
     } catch {
       toast('Gagal membuat PDF.');
