@@ -185,9 +185,42 @@ export default function Findings({
       {list.map((x) => {
         const st = x.f.status || 'Open';
         const od = st !== 'Closed' && x.f.due && x.f.due < t;
-        const photoBlock = (key: 'photos' | 'donePhotos', ids: string[] | undefined, emptyText: string) => {
+        const canAddFindingPhoto = role !== 'prod';
+        const canAddDonePhoto = st !== 'Closed';
+        const photoBlock = (
+          key: 'photos' | 'donePhotos',
+          ids: string[] | undefined,
+          emptyText: string,
+          canUpload: boolean,
+          hint?: string,
+        ) => {
           const urls = (ids || []).map((p) => `/api/photos/${p}`);
           const dk = x.src + x.aid + x.n + ':' + key;
+          const photos = urls.length ? (
+            <div className="ph-list">
+              {urls.map((u, k) => (
+                <Image
+                  key={u}
+                  className="thumb"
+                  src={u}
+                  alt="Foto bukti temuan"
+                  width={84}
+                  height={84}
+                  unoptimized
+                  onClick={() => openPhoto(urls, k)}
+                />
+              ))}
+            </div>
+          ) : (
+            <span className="muted" style={{ fontSize: 12 }}>{emptyText}</span>
+          );
+          if (!canUpload)
+            return (
+              <div className="ph-readonly">
+                {photos}
+                {hint && <span className="muted" style={{ fontSize: 12 }}>{hint}</span>}
+              </div>
+            );
           return (
             <div className="ph">
               <div
@@ -203,24 +236,7 @@ export default function Findings({
                   addPhotos(x, key, e.dataTransfer.files);
                 }}
               >
-                {urls.length ? (
-                  <div className="ph-list">
-                    {urls.map((u, k) => (
-                      <Image
-                        key={u}
-                        className="thumb"
-                        src={u}
-                        alt="Foto bukti temuan"
-                        width={84}
-                        height={84}
-                        unoptimized
-                        onClick={() => openPhoto(urls, k)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <span className="muted" style={{ fontSize: 12 }}>{emptyText}</span>
-                )}
+                {photos}
               </div>
               <div className="ph-btns" style={{ marginTop: 6 }}>
                 <label className="btn ghost sm">
@@ -232,6 +248,7 @@ export default function Findings({
                   <input type="file" accept="image/*" multiple hidden onChange={(e) => addPhotos(x, key, e.target.files)} />
                 </label>
               </div>
+              {hint && <span className="muted" style={{ fontSize: 12 }}>{hint}</span>}
             </div>
           );
         };
@@ -248,7 +265,13 @@ export default function Findings({
             <div className="find">{x.f.finding}</div>
             <div>
               <div className="f" style={{ display: 'block', marginBottom: 6 }}>Foto temuan</div>
-              {photoBlock('photos', x.f.photos, 'Tarik & lepas foto ke sini, atau pakai tombol di bawah')}
+              {photoBlock(
+                'photos',
+                x.f.photos,
+                'Tidak ada foto temuan',
+                canAddFindingPhoto,
+                role === 'prod' ? 'Foto temuan hanya dapat diunggah oleh auditor/admin.' : undefined,
+              )}
             </div>
             <label className="f">
               Action plan
@@ -284,7 +307,13 @@ export default function Findings({
             </div>
             <div>
               <div className="f" style={{ display: 'block', marginBottom: 6 }}>Bukti action plan (wajib sebelum Closed)</div>
-              {photoBlock('donePhotos', x.f.donePhotos, 'Belum ada bukti. Tarik & lepas foto ke sini.')}
+              {photoBlock(
+                'donePhotos',
+                x.f.donePhotos,
+                'Belum ada bukti.',
+                canAddDonePhoto,
+                st === 'Closed' ? 'Temuan sudah Closed. Foto bukti tidak dapat ditambah lagi.' : undefined,
+              )}
             </div>
           </article>
         );

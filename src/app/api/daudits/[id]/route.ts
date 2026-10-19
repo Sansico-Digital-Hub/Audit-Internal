@@ -18,6 +18,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (s.role === 'prod' && b?.fields && Object.keys(b.fields as object).length) {
     return NextResponse.json({ error: 'Produksi hanya dapat mengubah action plan.' }, { status: 403 });
   }
+  if (s.role === 'prod' && b?.patch && typeof b.patch === 'object' && 'photos' in b.patch) {
+    return NextResponse.json({ error: 'Foto temuan hanya dapat diunggah auditor/admin.' }, { status: 403 });
+  }
+  if (s.role === 'prod' && b?.patch && typeof b.patch === 'object' && 'donePhotos' in b.patch) {
+    const f = (cur.finds as Record<string, { status?: string } | undefined>)[String(b.n)];
+    if ((f?.status || 'Open') === 'Closed') {
+      return NextResponse.json({ error: 'Temuan sudah Closed. Foto bukti tidak dapat ditambah lagi.' }, { status: 403 });
+    }
+  }
 
   const set: Record<string, unknown> = {};
   if (b?.fields && typeof b.fields === 'object') {

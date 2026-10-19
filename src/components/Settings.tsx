@@ -6,7 +6,7 @@ import { IconClose } from './icons';
 import { api, now } from '@/lib/client';
 import { clLabel, clSecOpts } from '@/lib/catalog';
 import { CUSTOM_BASE, ROLE_LABEL } from '@/lib/constants';
-import { nl } from '@/lib/scoring';
+import { nl, unitSecs } from '@/lib/scoring';
 import type { CustomItem, Role } from '@/lib/types';
 
 export function AreasView({ areas, reload }: { areas: { id: string; name: string }[]; reload: () => void }) {
@@ -99,6 +99,8 @@ export function CustomItemsView() {
   const [er, setEr] = useState('');
   const [busy, setBusy] = useState(false);
   const [bscope, setBscope] = useState('p');
+  const [bq, setBq] = useState('');
+  const [bsec, setBsec] = useState('all');
   const [bedit, setBedit] = useState<number | null>(null);
   const [bt, setBt] = useState('');
   const [br, setBr] = useState('');
@@ -107,7 +109,16 @@ export function CustomItemsView() {
     return <div className="card empty">Hanya admin yang bisa mengatur poin checklist.</div>;
 
   const opts = clSecOpts(catalog, scope);
-  const baseItems = bscope === 'p' ? catalog.items : catalog.units.find((u) => u.id === bscope)?.items || [];
+  const bunit = bscope === 'p' ? null : catalog.units.find((u) => u.id === bscope);
+  const bsecs = bunit ? unitSecs(bunit) : catalog.sections;
+  const baseItems = bscope === 'p' ? catalog.items : bunit?.items || [];
+  const secOf = (n: number) => bsecs.find((s) => (n >= s.from && n <= s.to) || (s.extra || []).includes(n));
+  const bqLow = bq.trim().toLowerCase();
+  const shownBase = baseItems.filter((it) => {
+    if (bsec !== 'all' && secOf(it.n)?.k !== bsec) return false;
+    if (!bqLow) return true;
+    return (nl(it.n) + ' ' + it.t + ' ' + it.r).toLowerCase().includes(bqLow);
+  });
   const list = [...catalog.custom].sort(
     (a, b) => (a.scope === 'p' ? '0' : '1' + a.scope).localeCompare(b.scope === 'p' ? '0' : '1' + b.scope) || a.n - b.n,
   );
@@ -219,6 +230,7 @@ export function CustomItemsView() {
             value={bscope}
             onChange={(e) => {
               setBscope(e.target.value);
+              setBsec('all');
               setBedit(null);
             }}
           >
@@ -234,36 +246,59 @@ export function CustomItemsView() {
             </optgroup>
           </select>
         </label>
-        <div>
-          {baseItems.map((it) => {
+        <div className="cl-tools">
+          <label className="f">
+            Cari poin
+            <input type="search" value={bq} placeholder="Nomor, teks, atau acuan" onChange={(e) => setBq(e.target.value)} />
+          </label>
+          <label className="f">
+            Seksi
+            <select value={bsec} onChange={(e) => setBsec(e.target.value)}>
+              <option value="all">Semua seksi</option>
+              {bsecs.map((s) => (
+                <option key={s.k} value={s.k}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="cl-count muted">
+            {shownBase.length} dari {baseItems.length} poin
+          </span>
+        </div>
+        <div className="cl-list">
+          {!shownBase.length && <div className="empty">Tidak ada poin yang cocok dengan pencarian.</div>}
+          {shownBase.map((it) => {
             const ed = bedit === it.n;
             return (
-              <div className="clrow" key={it.n}>
+              <div className={'clrow' + (ed ? ' editing' : '')} key={it.n}>
                 <div>
-                  <div>
-                    <b className="mono">{nl(it.n)}</b> {it.custom && <span className="pill na">Tambahan</span>}
+                  <div className="cl-title">
+                    <span className="cl-num">{nl(it.n)}</span>
+                    {secOf(it.n) && <span className="pill na">{secOf(it.n)!.name}</span>}
+                    {it.custom && <span className="pill warn">Tambahan</span>}
                   </div>
                   {ed ? (
-                    <>
-                      <label className="f" style={{ marginTop: 6 }}>
+                    <div className="cl-edit">
+                      <label className="f">
                         Poin audit
                         <textarea value={bt} onChange={(e) => setBt(e.target.value)} />
                       </label>
-                      <label className="f" style={{ marginTop: 6 }}>
+                      <label className="f">
                         Acuan pemeriksaan (satu baris satu acuan)
                         <textarea value={br} onChange={(e) => setBr(e.target.value)} />
                       </label>
-                    </>
+                    </div>
                   ) : (
                     <>
-                      <div style={{ marginTop: 4 }}>{it.t}</div>
-                      {it.r && <div className="muted" style={{ fontSize: 12, whiteSpace: 'pre-line' }}>{it.r}</div>}
+                      <div className="cl-text">{it.t}</div>
+                      {it.r && <div className="cl-ref">{it.r}</div>}
                     </>
                   )}
                 </div>
                 <div className="acts">
                   {it.custom ? (
-                    <span className="muted" style={{ fontSize: 12 }}>edit di bawah</span>
+                    <span className="muted" style={{ fontSize: 12 }}>edit di daftar tambahan</span>
                   ) : ed ? (
                     <>
                       <button className="btn sm" type="button" disabled={busy} onClick={saveBase}>
@@ -341,64 +376,64 @@ export function CustomItemsView() {
       <section className="card pnl">
         <h3>Poin tambahan yang ada ({list.length})</h3>
         {!list.length && <div className="empty">Belum ada poin tambahan.</div>}
-        {list.map((e) => {
-          const key = e.scope + ':' + e.n;
-          const off = e.active === false;
-          const ed = edit === key;
-          return (
-            <div className="clrow" key={key}>
-              <div>
+        <div className="cl-list">
+          {list.map((e) => {
+            const key = e.scope + ':' + e.n;
+            const off = e.active === false;
+            const ed = edit === key;
+            return (
+              <div className={'clrow' + (ed ? ' editing' : '')} key={key}>
                 <div>
-                  <b className="mono">{nl(e.n)}</b>{' '}
-                  <span className={`pill ${off ? 'na' : 'good'}`}>{off ? 'Nonaktif' : 'Aktif'}</span>{' '}
-                  <span className="muted" style={{ fontSize: 12 }}>{clLabel(catalog, e)}</span>
-                </div>
-                {ed ? (
-                  <>
-                    <label className="f" style={{ marginTop: 6 }}>
-                      Poin audit
-                      <textarea value={et} onChange={(ev) => setEt(ev.target.value)} />
-                    </label>
-                    <label className="f" style={{ marginTop: 6 }}>
-                      Acuan pemeriksaan
-                      <textarea value={er} onChange={(ev) => setEr(ev.target.value)} />
-                    </label>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ marginTop: 4 }}>{e.t}</div>
-                    {e.r && (
-                      <div className="muted" style={{ fontSize: 12, whiteSpace: 'pre-line' }}>
-                        {e.r}
+                  <div className="cl-title">
+                    <span className="cl-num">{nl(e.n)}</span>
+                    <span className={`pill ${off ? 'na' : 'good'}`}>{off ? 'Nonaktif' : 'Aktif'}</span>
+                  </div>
+                  {ed ? (
+                    <div className="cl-edit">
+                      <label className="f">
+                        Poin audit
+                        <textarea value={et} onChange={(ev) => setEt(ev.target.value)} />
+                      </label>
+                      <label className="f">
+                        Acuan pemeriksaan
+                        <textarea value={er} onChange={(ev) => setEr(ev.target.value)} />
+                      </label>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="cl-text">{e.t}</div>
+                      <div className="cl-ref">
+                        {clLabel(catalog, e)}
+                        {e.r ? '\n' + e.r : ''}
                       </div>
-                    )}
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
+                <div className="acts">
+                  {ed ? (
+                    <>
+                      <button className="btn sm" type="button" onClick={() => act('save', key)}>
+                        Simpan
+                      </button>
+                      <button className="btn ghost sm" type="button" onClick={() => act('cancel', key)}>
+                        Batal
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn ghost sm" type="button" onClick={() => act('edit', key)}>
+                        Ubah
+                      </button>
+                      <button className="btn ghost sm" type="button" onClick={() => act('toggle', key)}>
+                        {off ? 'Aktifkan' : 'Nonaktifkan'}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="acts">
-                {ed ? (
-                  <>
-                    <button className="btn sm" type="button" onClick={() => act('save', key)}>
-                      Simpan
-                    </button>
-                    <button className="btn ghost sm" type="button" onClick={() => act('cancel', key)}>
-                      Batal
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button className="btn ghost sm" type="button" onClick={() => act('edit', key)}>
-                      Ubah
-                    </button>
-                    <button className="btn ghost sm" type="button" onClick={() => act('toggle', key)}>
-                      {off ? 'Aktifkan' : 'Nonaktifkan'}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
         <div className="muted" style={{ fontSize: 12 }}>
           Poin yang dinonaktifkan hilang dari form berikutnya, tetapi jawaban di audit lama tetap dihitung dan tampil di riwayat.
         </div>

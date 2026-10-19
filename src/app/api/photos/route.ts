@@ -17,13 +17,34 @@ export async function POST(req: Request) {
   const auditId = String(b.auditId ?? '');
   const auditSrc = b.auditSrc ? String(b.auditSrc) : 'p';
   const kind = b.kind === 'donePhotos' ? 'donePhotos' : 'photos';
-  if (s.role === 'prod') {
+  let audit: { scope: string; finds: Record<string, unknown> } | null = null;
+  if (s.role === 'prod' || kind === 'donePhotos') {
     const rows =
       auditSrc === 'd'
-        ? await db.select({ scope: deptAudits.unit }).from(deptAudits).where(eq(deptAudits.id, auditId)).limit(1)
-        : await db.select({ scope: audits.areaId }).from(audits).where(eq(audits.id, auditId)).limit(1);
-    if (!rows.some((r) => r.scope === s.area)) {
+        ? await db
+            .select({ scope: deptAudits.unit, finds: deptAudits.finds })
+            .from(deptAudits)
+            .where(eq(deptAudits.id, auditId))
+            .limit(1)
+        : await db
+            .select({ scope: audits.areaId, finds: audits.finds })
+            .from(audits)
+            .where(eq(audits.id, auditId))
+            .limit(1);
+    audit = rows[0] ?? null;
+  }
+  if (s.role === 'prod') {
+    if (!audit || audit.scope !== s.area) {
       return NextResponse.json({ error: 'Di luar area/unit Anda.' }, { status: 403 });
+    }
+    if (kind !== 'donePhotos') {
+      return NextResponse.json({ error: 'Foto temuan hanya dapat diunggah auditor/admin.' }, { status: 403 });
+    }
+  }
+  if (kind === 'donePhotos' && audit) {
+    const finds = audit.finds as Record<string, { status?: string } | undefined>;
+    if ((finds[String(b.n)]?.status || 'Open') === 'Closed') {
+      return NextResponse.json({ error: 'Temuan sudah Closed. Foto bukti tidak dapat ditambah lagi.' }, { status: 403 });
     }
   }
 

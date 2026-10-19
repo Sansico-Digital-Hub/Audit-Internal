@@ -236,6 +236,7 @@ label.f {
   text-transform: uppercase;
 }
 input[type="text"],
+input[type="search"],
 input[type="date"],
 input[type="password"],
 select,
@@ -751,6 +752,10 @@ svg .std {
   flex-wrap: wrap;
   gap: 8px;
 }
+.ph-readonly {
+  display: grid;
+  gap: 6px;
+}
 .ph-item {
   position: relative;
 }
@@ -889,16 +894,46 @@ svg .an {
   display: grid;
   gap: 6px;
 }
+.cl-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 14px 0 10px;
+}
+.cl-tools .f {
+  flex: 1 1 180px;
+  max-width: 320px;
+}
+.cl-count {
+  margin-left: auto;
+  padding-bottom: 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.cl-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
 .clrow {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.clrow:last-of-type {
-  border-bottom: 0;
+.clrow:hover {
+  border-color: var(--neutral-300);
+  box-shadow: var(--shadow-sm);
+}
+.clrow.editing {
+  border-color: var(--blue-300);
+  background: var(--blue-50);
 }
 .clrow > div:first-child {
   min-width: 0;
@@ -908,10 +943,54 @@ svg .an {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  flex: none;
+}
+.cl-title {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cl-num {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--accent);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+.cl-text {
+  margin-top: 6px;
+  line-height: 1.45;
+}
+.cl-ref {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+.cl-edit {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
 }
 @media (max-width: 600px) {
   .clrow {
     flex-direction: column;
+  }
+  .clrow .acts {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .cl-count {
+    margin-left: 0;
+    padding-bottom: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1106,6 +1185,7 @@ header.top {
   border-radius: var(--r-lg);
 }
 input[type="text"],
+input[type="search"],
 input[type="date"],
 input[type="password"],
 select,
