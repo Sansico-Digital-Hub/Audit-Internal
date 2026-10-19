@@ -22,7 +22,7 @@ export async function GET() {
       : DEFAULT_AREA_NAMES.map((name, i) => ({ id: 'a' + (i + 1), name }));
 
     return NextResponse.json({
-      session: s ? { role: s.role, area: s.area } : null,
+      session: s ? { role: s.role, area: s.area, exp: s.exp } : null,
       setup: !access.admin && !envPin('admin'),
       access: {
         prod: !!access.prod || !!envPin('prod'),

@@ -38,6 +38,7 @@ export default function Findings({
   const role = session?.role;
   const isDept = /^d/.test(session?.area || '');
   const [busy, setBusy] = useState(false);
+  const [dragKey, setDragKey] = useState<string | null>(null);
 
   const resolveArea = (id: string) => areas.find((a) => a.id === id)?.name || id;
   const VA = role === 'prod' ? audits.filter((a) => a.areaId === session?.area) : audits;
@@ -96,6 +97,7 @@ export default function Findings({
   async function addPhotos(x: Row, key: 'photos' | 'donePhotos', files: FileList | null) {
     if (!files) return;
     const ids = [...(x.f[key] || [])];
+    let saved = 0;
     setBusy(true);
     for (const file of Array.from(files)) {
       if (ids.length >= MAXPH_ACTION) {
@@ -114,11 +116,12 @@ export default function Findings({
           method: 'PATCH',
           body: JSON.stringify({ n: String(x.n), patch: { [key]: ids } }),
         });
+        saved++;
       } catch {
         toast('Foto gagal diunggah.');
       }
     }
-    toast('Foto tersimpan');
+    toast(saved ? 'Foto tersimpan' : 'Tidak ada foto yang tersimpan.');
     setBusy(false);
     reload();
   }
@@ -181,29 +184,45 @@ export default function Findings({
       {list.map((x) => {
         const st = x.f.status || 'Open';
         const od = st !== 'Closed' && x.f.due && x.f.due < t;
-        const addBtns = (key: 'photos' | 'donePhotos') =>
-          role === 'prod' ? null : (
-            <div className="ph-btns" style={{ marginTop: 6 }}>
-              <label className="btn ghost sm">
-                Ambil foto
-                <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => addPhotos(x, key, e.target.files)} />
-              </label>
-              <label className="btn ghost sm">
-                Dari galeri
-                <input type="file" accept="image/*" multiple hidden onChange={(e) => addPhotos(x, key, e.target.files)} />
-              </label>
-            </div>
-          );
-        const strip = (ids?: string[], emptyText = 'Tidak ada foto') => {
+        const photoBlock = (key: 'photos' | 'donePhotos', ids: string[] | undefined, emptyText: string) => {
           const urls = (ids || []).map((p) => `/api/photos/${p}`);
-          return urls.length ? (
-            <div className="ph-list">
-              {urls.map((u, k) => (
-                <img key={u} className="thumb" src={u} alt="Foto bukti temuan" onClick={() => openPhoto(urls, k)} />
-              ))}
+          const dk = x.src + x.aid + x.n + ':' + key;
+          return (
+            <div className="ph">
+              <div
+                className={'ph-drop' + (dragKey === dk ? ' drag' : '')}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragKey(dk);
+                }}
+                onDragLeave={() => setDragKey((k) => (k === dk ? null : k))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragKey(null);
+                  addPhotos(x, key, e.dataTransfer.files);
+                }}
+              >
+                {urls.length ? (
+                  <div className="ph-list">
+                    {urls.map((u, k) => (
+                      <img key={u} className="thumb" src={u} alt="Foto bukti temuan" onClick={() => openPhoto(urls, k)} />
+                    ))}
+                  </div>
+                ) : (
+                  <span className="muted" style={{ fontSize: 12 }}>{emptyText}</span>
+                )}
+              </div>
+              <div className="ph-btns" style={{ marginTop: 6 }}>
+                <label className="btn ghost sm">
+                  Ambil foto
+                  <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => addPhotos(x, key, e.target.files)} />
+                </label>
+                <label className="btn ghost sm">
+                  Dari galeri
+                  <input type="file" accept="image/*" multiple hidden onChange={(e) => addPhotos(x, key, e.target.files)} />
+                </label>
+              </div>
             </div>
-          ) : (
-            <span className="muted" style={{ fontSize: 12 }}>{emptyText}</span>
           );
         };
         return (
@@ -219,8 +238,7 @@ export default function Findings({
             <div className="find">{x.f.finding}</div>
             <div>
               <div className="f" style={{ display: 'block', marginBottom: 6 }}>Foto temuan</div>
-              {strip(x.f.photos)}
-              {addBtns('photos')}
+              {photoBlock('photos', x.f.photos, 'Tarik & lepas foto ke sini, atau pakai tombol di bawah')}
             </div>
             <label className="f">
               Action plan
@@ -256,8 +274,7 @@ export default function Findings({
             </div>
             <div>
               <div className="f" style={{ display: 'block', marginBottom: 6 }}>Bukti action plan (wajib sebelum Closed)</div>
-              {strip(x.f.donePhotos, 'Belum ada bukti')}
-              {addBtns('donePhotos')}
+              {photoBlock('donePhotos', x.f.donePhotos, 'Belum ada bukti. Tarik & lepas foto ke sini.')}
             </div>
           </article>
         );
@@ -265,7 +282,7 @@ export default function Findings({
 
       {role === 'prod' && (
         <div className="muted" style={{ fontSize: 12 }}>
-          Anda dapat mengisi action plan. Untuk menambah foto bukti, hubungi auditor/admin.{' '}
+          Anda dapat mengisi action plan dan mengunggah foto bukti sendiri.{' '}
           <button className="btn ghost sm" type="button" onClick={() => router.push(isDept ? '/departemen' : '/dashboard')}>
             Kembali ke tren
           </button>

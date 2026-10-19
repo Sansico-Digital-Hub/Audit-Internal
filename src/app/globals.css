@@ -1321,6 +1321,11 @@ textarea:focus {
   padding: 24px;
   background: var(--bg);
 }
+@media (max-height: 800px) {
+  .login-page {
+    justify-content: flex-start;
+  }
+}
 .login-brand {
   display: flex;
   align-items: center;
@@ -1345,6 +1350,69 @@ textarea:focus {
 .login-page .login {
   margin: 0;
   width: 100%;
+}
+.app-dl-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.app-dl-head h3 {
+  font-size: 15px;
+}
+.app-dl-head p {
+  margin: 3px 0 0;
+  font-size: 12px;
+}
+.app-dl-ic {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.app-dl-help {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 22px;
+  box-shadow: var(--shadow-md);
+  display: grid;
+  gap: 12px;
+}
+.modal-card h3 {
+  font-size: 18px;
+}
+.modal-card p {
+  margin: 0;
+  line-height: 1.5;
+}
+.modal-ic {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--warn-bg);
+  color: var(--warn);
 }
 
 @media (min-width: 901px) {

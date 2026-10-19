@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { AppCtx, type Session } from './ctx';
@@ -10,6 +10,14 @@ import { openCounts } from '@/lib/derive';
 import type { Audit, CustomItem, DeptAudit } from '@/lib/types';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
+
+const markExpired = () => {
+  try {
+    sessionStorage.setItem('audit:expired', '1');
+  } catch {
+    /* ignore */
+  }
+};
 
 // Auto-refresh senyap: perbarui data tanpa efek samping (tanpa skeleton, tanpa
 // fetch saat pindah tab / jaringan pulih, pertahankan data lama saat revalidasi).
@@ -34,6 +42,7 @@ interface ConfigResp {
 
 export default function AppProvider({ initialSession, children }: { initialSession: Session; children: React.ReactNode }) {
   const router = useRouter();
+  const loggingOut = useRef(false);
   const { data: cfg, mutate: mutateCfg } = useSWR<ConfigResp>('/api/config', fetcher, SWR_OPTS);
   const session = cfg ? cfg.session : initialSession;
   const loggedIn = !!session;
@@ -78,10 +87,39 @@ export default function AppProvider({ initialSession, children }: { initialSessi
 
   useEffect(() => {
     if (cfg && !cfg.session) {
+      if (!loggingOut.current) markExpired();
       router.replace('/login');
       router.refresh();
     }
   }, [cfg, router]);
+
+  // Auto logout tepat saat token 12 jam berakhir (tab tersembunyi pun dicek saat kembali aktif).
+  useEffect(() => {
+    const exp = session?.exp;
+    if (!exp) return;
+    let ended = false;
+    const end = () => {
+      if (ended) return;
+      ended = true;
+      markExpired();
+      router.replace('/login');
+      router.refresh();
+    };
+    const ms = exp * 1000 - Date.now();
+    if (ms <= 0) {
+      end();
+      return;
+    }
+    const timer = setTimeout(end, ms);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() >= exp * 1000) end();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [session?.exp, router]);
 
   const catalog = useMemo(() => buildCatalog(cfg?.custom || [], cfg?.itemOverrides || {}), [cfg?.custom, cfg?.itemOverrides]);
   const areas = cfg?.areas ?? [];
@@ -99,6 +137,13 @@ export default function AppProvider({ initialSession, children }: { initialSessi
     mutateD();
   };
   async function logout() {
+    loggingOut.current = true;
+    try {
+      sessionStorage.removeItem('audit:expired');
+      localStorage.removeItem('audit:exp');
+    } catch {
+      /* ignore */
+    }
     await api('/api/auth/logout', { method: 'POST' });
     router.replace('/login');
     router.refresh();

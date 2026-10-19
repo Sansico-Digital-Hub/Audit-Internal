@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client';
+import { SESSION_TTL_HOURS } from '@/lib/constants';
 import { defaultPath } from '@/lib/nav';
 import { SEED_UNITS } from '@/lib/seed-data';
-import { IconEye, IconEyeOff } from './icons';
+import { IconDownload, IconEye, IconEyeOff, IconLock } from './icons';
 import type { Role } from '@/lib/types';
 
 interface Cfg {
@@ -13,9 +14,14 @@ interface Cfg {
   areas: { id: string; name: string }[];
 }
 
+interface InstallPrompt extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 const SHORT: Record<Role, string> = { prod: 'Departemen', auditor: 'Auditor', admin: 'Admin' };
 
-export default function Login() {
+export default function Login({ initialExpired = false }: { initialExpired?: boolean }) {
   const router = useRouter();
   const [cfg, setCfg] = useState<Cfg | null>(null);
   const [cfgErr, setCfgErr] = useState('');
@@ -25,6 +31,11 @@ export default function Login() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [showPin, setShowPin] = useState(false);
+  const [expired, setExpired] = useState(initialExpired);
+  const [installEvt, setInstallEvt] = useState<InstallPrompt | null>(null);
+  const [installBusy, setInstallBusy] = useState(false);
+  const [installed, setInstalled] = useState(false);
+  const [installHelp, setInstallHelp] = useState(false);
 
   useEffect(() => {
     fetch('/api/config')
@@ -56,6 +67,67 @@ export default function Login() {
     return () => window.removeEventListener('pageshow', onShow);
   }, []);
 
+  // Pemberitahuan sesi berakhir (dari auto logout 12 jam atau server).
+  useEffect(() => {
+    let wasExpired = false;
+    try {
+      if (sessionStorage.getItem('audit:expired')) {
+        wasExpired = true;
+        sessionStorage.removeItem('audit:expired');
+      }
+      const exp = Number(localStorage.getItem('audit:exp'));
+      if (exp && exp <= Date.now()) {
+        wasExpired = true;
+        localStorage.removeItem('audit:exp');
+      }
+    } catch {
+      /* ignore */
+    }
+    const raf = wasExpired ? requestAnimationFrame(() => setExpired(true)) : 0;
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  // PWA: tombol unduh memakai dialog install bawaan browser.
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallEvt(e as InstallPrompt);
+    };
+    const onInstalled = () => {
+      setInstalled(true);
+      setInstallEvt(null);
+      setInstallHelp(false);
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    const raf = window.matchMedia('(display-mode: standalone)').matches ? requestAnimationFrame(() => setInstalled(true)) : 0;
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  async function installApp() {
+    if (installed) return;
+    if (!installEvt) {
+      setInstallHelp(true);
+      return;
+    }
+    setInstallBusy(true);
+    try {
+      await installEvt.prompt();
+      const choice = await installEvt.userChoice;
+      if (choice.outcome === 'accepted') setInstalled(true);
+      setInstallEvt(null);
+    } catch {
+      setInstallHelp(true);
+    }
+    setInstallBusy(false);
+  }
+
   const setup = !!cfg?.setup;
   const areas = cfg?.areas ?? [];
   const sel = setup ? 'admin' : lrole;
@@ -73,6 +145,12 @@ export default function Login() {
         body: JSON.stringify({ role: sel, pin, area }),
       });
       const isDept = /^d/.test(r.area || '');
+      try {
+        localStorage.setItem('audit:exp', String(Date.now() + SESSION_TTL_HOURS * 60 * 60 * 1000));
+      } catch {
+        /* ignore */
+      }
+      setExpired(false);
       setBusy(false);
       router.replace(defaultPath(r.role, isDept));
       router.refresh();
@@ -165,6 +243,42 @@ export default function Login() {
           Produksi / Departemen: lihat tren dan isi action plan area atau unit sendiri. Auditor: isi form dan lihat semua. Admin: semua fitur dan pengaturan akses.
         </div>
       </section>
+
+      <section className="card login app-dl">
+        <div className="app-dl-head">
+          <span className="app-dl-ic">
+            <IconDownload size={22} />
+          </span>
+          <div>
+            <h3>Unduh aplikasi</h3>
+            <p className="muted">Pasang Audit Internal di HP atau komputer agar bisa dibuka langsung seperti aplikasi.</p>
+          </div>
+        </div>
+        <button className="btn ghost" type="button" disabled={installed || installBusy} onClick={installApp}>
+          {installed ? 'Aplikasi sudah terpasang' : installBusy ? 'Membuka…' : 'Unduh aplikasi'}
+        </button>
+        {installHelp && !installed && (
+          <p className="muted app-dl-help">
+            Jika dialog unduh tidak muncul, buka menu browser lalu pilih <b>Install app</b> / <b>Tambahkan ke layar utama</b>.
+            Di iPhone gunakan Safari: <b>Bagikan</b> → <b>Tambah ke Layar Utama</b>.
+          </p>
+        )}
+      </section>
+
+      {expired && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="expired-title">
+          <div className="modal-card">
+            <span className="modal-ic">
+              <IconLock size={22} />
+            </span>
+            <h3 id="expired-title">Sesi sudah berakhir</h3>
+            <p className="muted">Sesi hanya aktif 12 jam. Silakan login ulang untuk melanjutkan.</p>
+            <button className="btn" type="button" onClick={() => setExpired(false)}>
+              Login ulang
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

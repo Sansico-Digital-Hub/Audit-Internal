@@ -2,8 +2,10 @@ import Login from '@/components/Login';
 import { IconLogo } from '@/components/icons';
 
 export const metadata = { title: 'Masuk · Audit Internal' };
+export const instant = false;
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
+  const sp = await searchParams;
   return (
     <main className="login-page">
       <div className="login-brand">
@@ -13,7 +15,7 @@ export default function LoginPage() {
           <small>Process Audit Checklist · 17 area produksi + 8 unit departemen</small>
         </div>
       </div>
-      <Login />
+      <Login initialExpired={sp.expired === '1'} />
     </main>
   );
 }

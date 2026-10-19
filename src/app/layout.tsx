@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   applicationName: "Audit Internal",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Audit Internal" },
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/icon-192.png" },
 };
 
 export const viewport: Viewport = {

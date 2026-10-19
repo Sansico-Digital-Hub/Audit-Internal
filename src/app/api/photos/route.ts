@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { photos } from '@/lib/db/schema';
+import { audits, deptAudits, photos } from '@/lib/db/schema';
 import { readSession } from '@/lib/auth';
 
 export async function POST(req: Request) {
@@ -13,15 +14,26 @@ export async function POST(req: Request) {
   const b64 = m ? m[2] : dataUrl;
   if (!b64) return NextResponse.json({ error: 'Data foto kosong.' }, { status: 400 });
 
-  const id = `${b.auditId}_${b.n}_${b.kind || 'photos'}_${Date.now().toString(36)}${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
+  const auditId = String(b.auditId ?? '');
+  const auditSrc = b.auditSrc ? String(b.auditSrc) : 'p';
+  const kind = b.kind === 'donePhotos' ? 'donePhotos' : 'photos';
+  if (s.role === 'prod') {
+    const rows =
+      auditSrc === 'd'
+        ? await db.select({ scope: deptAudits.unit }).from(deptAudits).where(eq(deptAudits.id, auditId)).limit(1)
+        : await db.select({ scope: audits.areaId }).from(audits).where(eq(audits.id, auditId)).limit(1);
+    if (!rows.some((r) => r.scope === s.area)) {
+      return NextResponse.json({ error: 'Di luar area/unit Anda.' }, { status: 403 });
+    }
+  }
+
+  const id = `${auditId}_${b.n}_${kind}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   await db.insert(photos).values({
     id,
-    auditId: String(b.auditId),
-    auditSrc: b.auditSrc ? String(b.auditSrc) : 'p',
+    auditId,
+    auditSrc,
     itemN: Number(b.n),
-    kind: b.kind ? String(b.kind) : 'photos',
+    kind,
     mime,
     data: Buffer.from(b64, 'base64'),
     createdAt: Date.now(),

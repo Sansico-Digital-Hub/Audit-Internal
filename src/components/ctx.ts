@@ -7,6 +7,7 @@ import type { Audit, CustomItem, DeptAudit, Role } from '@/lib/types';
 export interface Session {
   role: Role;
   area: string | null;
+  exp?: number;
 }
 
 export interface AppCtxType {

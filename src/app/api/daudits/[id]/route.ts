@@ -12,6 +12,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const rows = await db.select().from(deptAudits).where(eq(deptAudits.id, id)).limit(1);
   if (!rows.length) return NextResponse.json({ error: 'Tidak ditemukan.' }, { status: 404 });
   const cur = rows[0];
+  if (s.role === 'prod' && cur.unit !== s.area) {
+    return NextResponse.json({ error: 'Di luar unit Anda.' }, { status: 403 });
+  }
+  if (s.role === 'prod' && b?.fields && Object.keys(b.fields as object).length) {
+    return NextResponse.json({ error: 'Produksi hanya dapat mengubah action plan.' }, { status: 403 });
+  }
 
   const set: Record<string, unknown> = {};
   if (b?.fields && typeof b.fields === 'object') {

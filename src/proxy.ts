@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
+import { SESSION_TTL_HOURS } from '@/lib/constants';
 import { allowedPaths, defaultPath } from '@/lib/nav';
 import type { Role } from '@/lib/types';
 
@@ -17,6 +18,7 @@ export async function proxy(req: NextRequest) {
   if (token) {
     try {
       const { payload } = await jwtVerify(token, SECRET);
+      if (!payload.iat || Date.now() / 1000 - payload.iat > SESSION_TTL_HOURS * 60 * 60) throw new Error('expired');
       role = payload.role as Role;
       area = (payload.area as string) ?? null;
     } catch {
@@ -32,7 +34,7 @@ export async function proxy(req: NextRequest) {
 
   const isProtected = PROTECTED.some((p) => pathname === p || pathname.startsWith(p + '/'));
   if (!isProtected) return NextResponse.next();
-  if (!role) return NextResponse.redirect(new URL('/login', req.url));
+  if (!role) return NextResponse.redirect(new URL(token ? '/login?expired=1' : '/login', req.url));
 
   const allowed = allowedPaths(role);
   if (!allowed.some((p) => pathname === p || pathname.startsWith(p + '/'))) {

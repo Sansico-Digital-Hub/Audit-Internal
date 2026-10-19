@@ -8,5 +8,5 @@ export const instant = false;
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const s = await readSession();
   if (!s) redirect('/login');
-  return <Shell initialSession={{ role: s.role, area: s.area }}>{children}</Shell>;
+  return <Shell initialSession={{ role: s.role, area: s.area, exp: s.exp }}>{children}</Shell>;
 }

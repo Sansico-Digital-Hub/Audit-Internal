@@ -8,6 +8,7 @@ import { STD, WARN } from '@/lib/constants';
 import { csvDept, csvScores } from '@/lib/csv';
 import { byWeek, filterByRange, latestByArea, pKey, pLab, presetRange, rangeLabel } from '@/lib/derive';
 import { download } from '@/lib/client';
+import { downloadPdf } from '@/lib/pdf';
 import { cls, dateLabel, fmt, today, wlab } from '@/lib/format';
 import { calcOf, cmp, nl, unitById, withCalc } from '@/lib/scoring';
 import type { Audit, Calc, DeptAudit, Section, Unit } from '@/lib/types';
@@ -133,8 +134,9 @@ export function ProdDashboard({
   filters: Filters;
   reload: () => void;
 }) {
-  const { catalog, session, areas } = useApp();
+  const { catalog, session, areas, toast } = useApp();
   const wide = useWide();
+  const [pdfBusy, setPdfBusy] = useState(false);
   const role = session?.role;
   const scopeArea = session?.area || '';
   const VA = role === 'prod' ? audits.filter((a) => a.areaId === scopeArea) : audits;
@@ -171,6 +173,32 @@ export function ProdDashboard({
     tip: `${r.a.name} · ${dateLabel(r.au.date)}: ${(r.au.c.total as number).toFixed(1)}`,
   }));
 
+  async function savePdf() {
+    setPdfBusy(true);
+    try {
+      await downloadPdf(
+        {
+          title: 'Performance Process Audit',
+          scope: role === 'prod' ? unitById(scopeArea)?.name || resolveArea(scopeArea) : 'Semua area produksi',
+          period: rangeLabel(filters.from, filters.to),
+          performance: done.map((r) => ({
+            name: r.a.name,
+            total: r.au.c.total as number,
+            date: r.au.date,
+            parts: r.au.c.secs.map((s) => ({ name: s.name, pts: s.pts ?? 0, w: s.w })),
+          })),
+          weeks: ptsB.map((p) => ({ lab: p.lab, v: p.v })),
+          latest: done.map((r) => ({ name: r.a.name, v: r.au.c.total as number, date: r.au.date })),
+          legend: sections.map((s) => s.name),
+        },
+        `performance-process-audit-${today()}.pdf`,
+      );
+    } catch {
+      toast('Gagal membuat PDF.');
+    }
+    setPdfBusy(false);
+  }
+
   return (
     <>
       <div className="bar-top">
@@ -194,6 +222,9 @@ export function ProdDashboard({
                   ))}
                 </select>
               </label>
+              <button className="btn ghost" type="button" disabled={pdfBusy} onClick={savePdf}>
+                {pdfBusy ? 'Menyiapkan PDF…' : 'Unduh PDF'}
+              </button>
               {role !== 'prod' && (
                 <button className="btn ghost" type="button" onClick={() => download('skor-audit-internal.csv', csvScores(audits, resolveArea))}>
                   Unduh CSV skor
@@ -440,7 +471,8 @@ export function DeptDashboard({
   filters: Filters;
   reload: () => void;
 }) {
-  const { catalog, session } = useApp();
+  const { catalog, session, toast } = useApp();
+  const [pdfBusy, setPdfBusy] = useState(false);
   const role = session?.role;
   const scoped = role === 'prod';
   const VU: Unit[] = scoped ? catalog.units.filter((u) => u.id === session?.area) : catalog.units;
@@ -468,6 +500,9 @@ export function DeptDashboard({
                 <option value="month">Bulanan</option>
               </select>
             </label>
+            <button className="btn ghost" type="button" disabled={pdfBusy} onClick={savePdf}>
+              {pdfBusy ? 'Menyiapkan PDF…' : 'Unduh PDF'}
+            </button>
             {!scoped && (
               <button className="btn ghost" type="button" onClick={() => download('skor-audit-departemen.csv', csvDept(daudits, (id) => unitById(id)?.name || id))}>
                 Unduh CSV skor
@@ -524,6 +559,34 @@ export function DeptDashboard({
       const v = l.reduce((a, b) => a + b, 0) / l.length;
       return { lab: pLab(k, gran), v, tip: `${pLab(k, gran)}: ${v.toFixed(1)} (${l.length} unit)` };
     });
+
+  async function savePdf() {
+    setPdfBusy(true);
+    try {
+      await downloadPdf(
+        {
+          title: 'Performance Process Audit',
+          scope: scoped ? unitById(session?.area || '')?.name || '' : 'Semua unit departemen',
+          period: rangeLabel(filters.from, filters.to),
+          performance: done.map((r) => ({
+            name: r.u.name,
+            total: r.au.c.total as number,
+            date: r.au.date,
+            parts: r.au.c.secs.map((s) => ({ name: s.name, pts: s.pts ?? 0, w: s.w })),
+          })),
+          weeks: pts.map((p) => ({ lab: p.lab, v: p.v })),
+          latest: done.map((r) => ({ name: r.u.name, v: r.au.c.total as number, date: r.au.date })),
+          legend: scoped ? done[0]?.au.c.secs.map((s) => s.name) || [] : [],
+          weeklyTitle: gran === 'month' ? 'Overall score per bulan' : 'Overall score per minggu',
+          latestTitle: 'Skor terbaru per unit',
+        },
+        `performance-process-audit-departemen-${today()}.pdf`,
+      );
+    } catch {
+      toast('Gagal membuat PDF.');
+    }
+    setPdfBusy(false);
+  }
 
   const cnt: Record<string, { c: number; u: Unit; n: number }> = {};
   list.forEach((a) => {
