@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from './ctx';
 import type { Filters } from './useFilters';
@@ -205,7 +206,16 @@ export default function Findings({
                 {urls.length ? (
                   <div className="ph-list">
                     {urls.map((u, k) => (
-                      <img key={u} className="thumb" src={u} alt="Foto bukti temuan" onClick={() => openPhoto(urls, k)} />
+                      <Image
+                        key={u}
+                        className="thumb"
+                        src={u}
+                        alt="Foto bukti temuan"
+                        width={84}
+                        height={84}
+                        unoptimized
+                        onClick={() => openPhoto(urls, k)}
+                      />
                     ))}
                   </div>
                 ) : (

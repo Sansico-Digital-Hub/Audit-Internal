@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from './ctx';
 import { IconChevron } from './icons';
@@ -315,7 +316,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
                       <div className="ph-list">
                         {(form.photos[i.n] || []).map((u, k) => (
                           <div className="ph-item" key={k}>
-                            <img className="thumb" src={u} alt={'Foto temuan ' + i.n} />
+                            <Image className="thumb" src={u} alt={'Foto temuan ' + i.n} width={84} height={84} unoptimized />
                             <button type="button" className="ph-x" aria-label="Hapus foto" onClick={() => removePhoto(i.n, k)}>
                               ×
                             </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { AppCtx, type Session } from './ctx';
@@ -177,7 +178,15 @@ export default function AppProvider({ initialSession, children }: { initialSessi
       )}
       {photo && (
         <div className="lb" onClick={() => setPhoto(null)}>
-          <img src={photo.list[photo.i]} alt="Foto bukti" onClick={(e) => e.stopPropagation()} />
+          <Image
+            src={photo.list[photo.i]}
+            alt="Foto bukti"
+            width={1200}
+            height={1200}
+            unoptimized
+            style={{ width: 'auto', height: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          />
           {photo.list.length > 1 && (
             <>
               <button

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useApp } from './ctx';
 import { IconClose, IconEdit } from './icons';
 import { api } from '@/lib/client';
@@ -429,11 +430,14 @@ export default function History({
                         {(f.photos || []).length > 0 && (
                           <div className="ph-list" style={{ marginTop: 6 }}>
                             {(f.photos || []).map((p, k) => (
-                              <img
+                              <Image
                                 key={p}
                                 className="thumb"
                                 src={`/api/photos/${p}`}
                                 alt="Foto temuan"
+                                width={84}
+                                height={84}
+                                unoptimized
                                 onClick={() => openPhoto((f.photos || []).map((x) => `/api/photos/${x}`), k)}
                               />
                             ))}
