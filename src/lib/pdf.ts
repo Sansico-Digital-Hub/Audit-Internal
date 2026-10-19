@@ -163,9 +163,22 @@ export async function buildPdf(report: PdfReport) {
           const h = (Math.max(0, Math.min(100, p.pts)) / 100) * plotH;
           if (h <= 0) return;
           rect(bx, cy, barW, h, color(PALETTE[pi % PALETTE.length]));
+          // Skor komponen di dalam batang, mengikuti dashboard.
+          if (barW >= 8 && h >= 8) {
+            const label = p.pts.toFixed(0);
+            text(label, cx - bold.widthOfTextAtSize(label, 4.6) / 2, cy + h / 2 - 2, 4.6, bold, rgb(1, 1, 1));
+          }
           cy += h;
         });
-        text(bar.total.toFixed(1), cx - font.widthOfTextAtSize(bar.total.toFixed(1), 5.2) / 2, y(bar.total) + 2, 5.2, bold, ink);
+        if (barW >= 8) {
+          const totalLabel = bar.total.toFixed(1);
+          text(totalLabel, cx - bold.widthOfTextAtSize(totalLabel, 5.2) / 2, y(bar.total) + 2, 5.2, bold, ink);
+        } else {
+          // 5-8 minggu: label semua batang dengan angka bulat kecil agar tetap muat.
+          const totalLabel = String(Math.round(bar.total));
+          const size = Math.max(2.6, Math.min(3.4, (barW + barGap) * 0.55));
+          text(totalLabel, cx - bold.widthOfTextAtSize(totalLabel, size) / 2, y(bar.total) + 1, size, bold, ink);
+        }
       }
     });
     const nm = clip(g.name, 58, 5.4, bold);
@@ -198,24 +211,30 @@ export async function buildPdf(report: PdfReport) {
   drawPanel(leftX, report.weeklyTitle || 'OVERALL SCORE');
   const lPlotLeft = leftX + 30;
   const lPlotRight = leftX + panelW - 12;
-  const lSlot = report.weeks.length ? (lPlotRight - lPlotLeft) / report.weeks.length : lPlotRight - lPlotLeft;
-  const lBarW = Math.max(3, Math.min(13, lSlot * 0.68));
+  const lWeeks = report.weeks;
+  const lSlot = lWeeks.length ? (lPlotRight - lPlotLeft) / lWeeks.length : lPlotRight - lPlotLeft;
+  const lBarW = Math.max(2, Math.min(13, lSlot * 0.68));
   for (let v = 0; v <= 100; v += 20) {
     const yy = chartBottom + (v / 100) * (chartTop - chartBottom);
     page.drawLine({ start: { x: lPlotLeft, y: yy }, end: { x: lPlotRight, y: yy }, thickness: 0.4, color: grid });
     text(String(v), lPlotLeft - 5 - font.widthOfTextAtSize(String(v), 5.5), yy - 2, 5.5, font, muted);
   }
   const lY = (v: number) => chartBottom + (Math.max(0, Math.min(100, v)) / 100) * (chartTop - chartBottom);
-  if (!report.weeks.length) {
+  if (!lWeeks.length) {
     text('Belum ada data.', lPlotLeft + 6, chartBottom + 40, 7, font, muted);
   }
-  report.weeks.slice(-24).forEach((w, i) => {
+  lWeeks.forEach((w, i) => {
     const cx = lPlotLeft + i * lSlot + lSlot / 2;
     const top = lY(w.v);
     rect(cx - lBarW / 2, chartBottom, lBarW, top - chartBottom, w.v >= STD ? good : bad);
     const label = w.lab;
     text(label, cx + 2, chartBottom - 3, 5, font, muted, -90);
-    if (report.weeks.length <= 12) text(w.v.toFixed(0), cx - font.widthOfTextAtSize(w.v.toFixed(0), 5) / 2, top + 2, 5, bold, ink);
+    const value = w.v.toFixed(0);
+    if (lSlot >= 8) {
+      text(value, cx - bold.widthOfTextAtSize(value, 4.6) / 2, top + 2, 4.6, bold, ink);
+    } else {
+      text(value, cx - 1, top + 3, 4.2, bold, ink, 90);
+    }
   });
   page.drawLine({
     start: { x: lPlotLeft, y: lY(STD) },
