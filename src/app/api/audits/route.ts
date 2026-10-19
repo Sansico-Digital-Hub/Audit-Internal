@@ -5,7 +5,7 @@ import { readSession } from '@/lib/auth';
 
 export async function GET() {
   const rows = await db.select().from(audits);
-  return NextResponse.json(rows);
+  return NextResponse.json(rows, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(req: Request) {

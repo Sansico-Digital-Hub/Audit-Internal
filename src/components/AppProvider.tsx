@@ -10,7 +10,7 @@ import { api, now } from '@/lib/client';
 import { openCounts } from '@/lib/derive';
 import type { Audit, CustomItem, DeptAudit } from '@/lib/types';
 
-const fetcher = (u: string) => fetch(u).then((r) => r.json());
+const fetcher = (u: string) => fetch(u, { cache: 'no-store' }).then((r) => r.json());
 
 const markExpired = () => {
   try {

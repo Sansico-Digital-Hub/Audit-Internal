@@ -21,24 +21,27 @@ export async function GET() {
       ? stored.map((a) => ({ id: String(a.id), name: String(a.name) }))
       : DEFAULT_AREA_NAMES.map((name, i) => ({ id: 'a' + (i + 1), name }));
 
-    return NextResponse.json({
-      session: s ? { role: s.role, area: s.area, exp: s.exp } : null,
-      setup: !access.admin && !envPin('admin'),
-      access: {
-        prod: !!access.prod || !!envPin('prod'),
-        auditor: !!access.auditor || !!envPin('auditor'),
-        admin: !!access.admin || !!envPin('admin'),
+    return NextResponse.json(
+      {
+        session: s ? { role: s.role, area: s.area, exp: s.exp } : null,
+        setup: !access.admin && !envPin('admin'),
+        access: {
+          prod: !!access.prod || !!envPin('prod'),
+          auditor: !!access.auditor || !!envPin('auditor'),
+          admin: !!access.admin || !!envPin('admin'),
+        },
+        envManaged: {
+          prod: !!envPin('prod'),
+          auditor: !!envPin('auditor'),
+          admin: !!envPin('admin'),
+        },
+        scopePins: Object.fromEntries(Object.entries(scopePins).map(([k, v]) => [k, !!v])),
+        itemOverrides: overrides || {},
+        areas,
+        custom: customCfg?.list || [],
       },
-      envManaged: {
-        prod: !!envPin('prod'),
-        auditor: !!envPin('auditor'),
-        admin: !!envPin('admin'),
-      },
-      scopePins: Object.fromEntries(Object.entries(scopePins).map(([k, v]) => [k, !!v])),
-      itemOverrides: overrides || {},
-      areas,
-      custom: customCfg?.list || [],
-    });
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
   } catch (e) {
     return NextResponse.json({ error: DB_HINT, detail: (e as Error).message }, { status: 503 });
   }
