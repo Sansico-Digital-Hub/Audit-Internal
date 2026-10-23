@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from './ctx';
 import { IconClose } from './icons';
 import { api, now } from '@/lib/client';
@@ -14,9 +14,20 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
   const [draft, setDraft] = useState<{ id: string; name: string }[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState('');
+  const focusRef = useRef<string | null>(null);
   const list = draft ?? areas;
   const query = q.trim().toLowerCase();
   const shown = list.filter((a) => !query || a.name.toLowerCase().includes(query) || a.id.toLowerCase().includes(query));
+
+  useEffect(() => {
+    const id = focusRef.current;
+    if (!id) return;
+    const el = document.getElementById('area-input-' + id) as HTMLInputElement | null;
+    if (!el) return;
+    focusRef.current = null;
+    el.focus();
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [list]);
 
   function edit(id: string, name: string) {
     setDraft((d) => (d ?? areas).map((a) => (a.id === id ? { ...a, name } : a)));
@@ -26,6 +37,8 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
   }
   function add() {
     const id = 'ar' + now().toString(36);
+    setQ('');
+    focusRef.current = id;
     setDraft((d) => [...(d ?? areas), { id, name: '' }]);
   }
 
@@ -49,24 +62,11 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
 
   return (
     <>
-      <div className="bar-top">
-        <div>
-          <h2>Daftar Area</h2>
-          <p className="muted" style={{ margin: '4px 0 0' }}>
-            Tambah, ubah nama, atau hapus area produksi. Perubahan berlaku untuk form dan dashboard; audit lama tetap tersimpan.
-          </p>
-        </div>
-        <div className="area-actions">
-          {draft && <span className="pill warn">Belum disimpan</span>}
-          {draft && (
-            <button className="btn ghost" type="button" onClick={() => setDraft(null)}>
-              Batal
-            </button>
-          )}
-          <button className="btn" type="button" disabled={busy || !draft} onClick={save}>
-            {busy ? 'Menyimpan…' : 'Simpan'}
-          </button>
-        </div>
+      <div>
+        <h2>Daftar Area</h2>
+        <p className="muted" style={{ margin: '4px 0 0' }}>
+          Tambah, ubah nama, atau hapus area produksi. Perubahan berlaku untuk form dan dashboard; audit lama tetap tersimpan.
+        </p>
       </div>
       <section className="card pnl">
         <div className="area-toolbar">
@@ -91,6 +91,7 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
               <div className="area-item" key={a.id}>
                 <span className="area-num">{index + 1}</span>
                 <input
+                  id={'area-input-' + a.id}
                   type="text"
                   className="area-name"
                   value={a.name}
@@ -112,8 +113,20 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
           })}
         </div>
         <div className="area-foot">
-          <span>{list.length} area produksi</span>
-          <span>Urutan ini dipakai di form dan dashboard.</span>
+          <span>
+            {list.length} area produksi · urutan ini dipakai di form dan dashboard.
+          </span>
+          <div className="area-foot-actions">
+            <span className={`pill ${draft ? 'warn' : 'good'}`}>{draft ? 'Belum disimpan' : 'Tersimpan'}</span>
+            {draft && (
+              <button className="btn ghost sm" type="button" onClick={() => setDraft(null)}>
+                Batal
+              </button>
+            )}
+            <button className="btn sm" type="button" disabled={busy || !draft} onClick={save}>
+              {busy ? 'Menyimpan…' : 'Simpan'}
+            </button>
+          </div>
         </div>
       </section>
     </>

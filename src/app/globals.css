@@ -1648,12 +1648,6 @@ textarea:focus {
 }
 
 /* ===== Daftar area ===== */
-.area-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
 .area-toolbar {
   display: flex;
   align-items: center;
@@ -1729,14 +1723,23 @@ textarea:focus {
 }
 .area-foot {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 6px 16px;
+  gap: 8px 16px;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
+}
+.area-foot-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
 }
 @media (max-width: 760px) {
   .area-list {
@@ -1745,12 +1748,9 @@ textarea:focus {
   .area-count {
     margin-left: 0;
   }
-  .area-actions {
+  .area-foot-actions {
     width: 100%;
-  }
-  .area-actions .btn {
-    flex: 1;
-    justify-content: center;
+    justify-content: flex-end;
   }
 }
 
