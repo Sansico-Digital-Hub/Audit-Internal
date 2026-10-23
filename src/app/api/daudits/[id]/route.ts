@@ -39,6 +39,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (f.auditee != null) set.auditee = String(f.auditee);
     if (f.ans != null) set.ans = f.ans;
     if (f.score != null) set.score = f.score;
+    if (f.finds != null && typeof f.finds === 'object') set.finds = f.finds;
   }
   if (b?.n != null && b?.patch) {
     const finds = { ...((cur.finds as Record<string, unknown>) || {}) };

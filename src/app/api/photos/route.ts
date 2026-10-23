@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Foto temuan hanya dapat diunggah auditor/admin.' }, { status: 403 });
     }
   }
-  if (kind === 'donePhotos' && audit) {
+  if (kind === 'donePhotos' && audit && s.role === 'prod') {
     const finds = audit.finds as Record<string, { status?: string } | undefined>;
     if ((finds[String(b.n)]?.status || 'Open') === 'Closed') {
       return NextResponse.json({ error: 'Temuan sudah Closed. Foto bukti tidak dapat ditambah lagi.' }, { status: 403 });

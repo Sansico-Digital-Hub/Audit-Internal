@@ -4,11 +4,11 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useApp } from './ctx';
 import { IconClose, IconEdit } from './icons';
-import { api } from '@/lib/client';
-import { PRODUCT_SECTIONS } from '@/lib/constants';
-import { cls, dateLabel, fmt } from '@/lib/format';
+import { api, compress } from '@/lib/client';
+import { MAXPH, MAXPH_ACTION, PRODUCT_SECTIONS, STATUSES } from '@/lib/constants';
+import { cls, dateLabel, fmt, today } from '@/lib/format';
 import { calc, cmp, inSec, nl, unitById, unitSecs, withCalc } from '@/lib/scoring';
-import type { Answer, Audit, DeptAudit } from '@/lib/types';
+import type { Answer, Audit, DeptAudit, Finding } from '@/lib/types';
 
 const hasAns = (a: Audit | DeptAudit) => !!a.ans && Object.keys(a.ans).length > 0;
 const num = (v: string) => {
@@ -57,6 +57,7 @@ interface Form {
   sec: Record<string, string>;
   cats: string[];
   ans: Record<string, Answer>;
+  finds: Record<string, Finding>;
 }
 
 export default function History({
@@ -74,6 +75,8 @@ export default function History({
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Form | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<Record<number, Partial<Record<'photos' | 'donePhotos', string[]>>>>({});
+  const [removed, setRemoved] = useState<string[]>([]);
   const role = session?.role;
 
   const list = [...audits, ...daudits].map(withCalc).sort((a, b) => -cmp(a, b));
@@ -104,6 +107,8 @@ export default function History({
     setDetailId(null);
     setEditing(false);
     setForm(null);
+    setPending({});
+    setRemoved([]);
   }
 
   function startEdit() {
@@ -119,7 +124,10 @@ export default function History({
       sec: {},
       cats: [],
       ans: { ...(detail.ans || {}) },
+      finds: JSON.parse(JSON.stringify(detail.finds || {})) as Record<string, Finding>,
     };
+    setPending({});
+    setRemoved([]);
     if (!dept) {
       PRODUCT_SECTIONS.forEach((s) => {
         const p = (detail.score as Record<string, number> | undefined)?.[s.k];
@@ -134,36 +142,198 @@ export default function History({
     setEditing(true);
   }
 
+  function patchFinding(n: number, patchObj: Partial<Finding>) {
+    if (!form) return;
+    setForm({
+      ...form,
+      finds: { ...form.finds, [n]: { ...(form.finds[n] || {}), ...patchObj } },
+    });
+  }
+
+  function setAnswer(n: number, v: Answer) {
+    if (!form) return;
+    const finds = { ...form.finds };
+    if (v === 'DM' && !finds[n]) {
+      finds[n] = { finding: '', plan: '', pic: '', due: '', status: 'Open', photos: [], donePhotos: [] };
+    }
+    setForm({ ...form, ans: { ...form.ans, [n]: v }, finds });
+  }
+
+  async function addPhotoData(n: number, kind: 'photos' | 'donePhotos', files: FileList | null) {
+    if (!form || !files) return;
+    const max = kind === 'photos' ? MAXPH : MAXPH_ACTION;
+    const existing = (form.finds[n]?.[kind] || []).length;
+    const arr = [...(pending[n]?.[kind] || [])];
+    setBusy(true);
+    for (const file of Array.from(files)) {
+      if (existing + arr.length >= max) {
+        toast('Maksimal ' + max + ' foto.');
+        break;
+      }
+      try {
+        arr.push(await compress(file));
+      } catch {
+        toast('Foto tidak bisa diproses.');
+      }
+    }
+    setPending((p) => ({ ...p, [n]: { ...(p[n] || {}), [kind]: arr } }));
+    setBusy(false);
+  }
+
+  function removeExistingPhoto(n: number, kind: 'photos' | 'donePhotos', id: string) {
+    if (!form) return;
+    const f = form.finds[n] || {};
+    setRemoved((r) => [...new Set([...r, id])]);
+    setForm({
+      ...form,
+      finds: { ...form.finds, [n]: { ...f, [kind]: (f[kind] || []).filter((x) => x !== id) } },
+    });
+  }
+
+  function removePendingPhoto(n: number, kind: 'photos' | 'donePhotos', index: number) {
+    setPending((p) => {
+      const arr = [...(p[n]?.[kind] || [])];
+      arr.splice(index, 1);
+      return { ...p, [n]: { ...(p[n] || {}), [kind]: arr } };
+    });
+  }
+
+  function photoEditor(n: number, kind: 'photos' | 'donePhotos') {
+    if (!form) return null;
+    const f = form.finds[n] || {};
+    const existing = f[kind] || [];
+    const drafts = pending[n]?.[kind] || [];
+    const status = f.status || 'Open';
+    const canAdd = kind === 'photos' || status !== 'Closed';
+    const existingUrls = existing.map((p) => `/api/photos/${p}`);
+    const allUrls = [...existingUrls, ...drafts];
+    return (
+      <div className="ph">
+        <div className="ph-list">
+          {existing.map((p, k) => (
+            <div className="ph-item" key={p}>
+              <Image
+                className="thumb"
+                src={`/api/photos/${p}`}
+                alt="Foto temuan"
+                width={84}
+                height={84}
+                unoptimized
+                onClick={() => openPhoto(allUrls, k)}
+              />
+              <button type="button" className="ph-x" aria-label="Hapus foto" onClick={() => removeExistingPhoto(n, kind, p)}>
+                ×
+              </button>
+            </div>
+          ))}
+          {drafts.map((src, k) => (
+            <div className="ph-item" key={'draft-' + k}>
+              <Image
+                className="thumb"
+                src={src}
+                alt="Foto baru"
+                width={84}
+                height={84}
+                unoptimized
+                onClick={() => openPhoto(allUrls, existing.length + k)}
+              />
+              <button type="button" className="ph-x" aria-label="Hapus foto" onClick={() => removePendingPhoto(n, kind, k)}>
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+        {canAdd ? (
+          <div className="ph-btns">
+            <label className="btn ghost sm">
+              Ambil foto
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={(e) => {
+                  addPhotoData(n, kind, e.target.files);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            <label className="btn ghost sm">
+              Dari galeri
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(e) => {
+                  addPhotoData(n, kind, e.target.files);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          </div>
+        ) : (
+          <span className="muted" style={{ fontSize: 12 }}>
+            Status Closed. Ubah ke Open/Progress dulu untuk menambah bukti.
+          </span>
+        )}
+      </div>
+    );
+  }
+
   async function save() {
     if (!detail || !form) return;
     const dept = isDept(detail);
-    const fields: Record<string, unknown> = { date: form.date, auditor: form.auditor.trim(), auditee: form.auditee.trim() };
-    if (dept) {
-      const u = unitById(form.unit);
-      fields.unit = form.unit;
-      fields.unitName = u?.name || form.unit;
-      fields.dept = u?.dept || '';
-      if (hasAns(detail)) fields.ans = form.ans;
-      else fields.score = { total: num(form.total), dm: (detail.score as { dm?: number } | undefined)?.dm ?? 0, cats: form.cats.map(num) };
-    } else {
-      fields.areaId = form.areaId;
-      fields.areaName = areas.find((a) => a.id === form.areaId)?.name || form.areaId;
-      if (hasAns(detail)) {
-        fields.ans = form.ans;
-      } else {
-        const score: Record<string, number | null> = { total: num(form.total), dm: (detail.score as { dm?: number } | undefined)?.dm ?? 0 };
-        PRODUCT_SECTIONS.forEach((s) => (score[s.k] = num(form.sec[s.k])));
-        fields.score = score;
-      }
-    }
     setBusy(true);
+    const uploaded: string[] = [];
+    const finds = JSON.parse(JSON.stringify(form.finds)) as Record<string, Finding>;
     try {
+      for (const [n, groups] of Object.entries(pending)) {
+        for (const kind of ['photos', 'donePhotos'] as const) {
+          for (const data of groups[kind] || []) {
+            const r = await api<{ id: string }>('/api/photos', {
+              method: 'POST',
+              body: JSON.stringify({ auditId: detail.id, auditSrc: dept ? 'd' : 'p', n: +n, kind, data }),
+            });
+            uploaded.push(r.id);
+            finds[n] = { ...(finds[n] || {}), [kind]: [...(finds[n]?.[kind] || []), r.id] };
+          }
+        }
+      }
+      const fields: Record<string, unknown> = {
+        date: form.date,
+        auditor: form.auditor.trim(),
+        auditee: form.auditee.trim(),
+        finds,
+      };
+      if (dept) {
+        const u = unitById(form.unit);
+        fields.unit = form.unit;
+        fields.unitName = u?.name || form.unit;
+        fields.dept = u?.dept || '';
+        if (hasAns(detail)) fields.ans = form.ans;
+        else fields.score = { total: num(form.total), dm: (detail.score as { dm?: number } | undefined)?.dm ?? 0, cats: form.cats.map(num) };
+      } else {
+        fields.areaId = form.areaId;
+        fields.areaName = areas.find((a) => a.id === form.areaId)?.name || form.areaId;
+        if (hasAns(detail)) {
+          fields.ans = form.ans;
+        } else {
+          const score: Record<string, number | null> = { total: num(form.total), dm: (detail.score as { dm?: number } | undefined)?.dm ?? 0 };
+          PRODUCT_SECTIONS.forEach((s) => (score[s.k] = num(form.sec[s.k])));
+          fields.score = score;
+        }
+      }
       await api(`/api/${dept ? 'daudits' : 'audits'}/${detail.id}`, { method: 'PATCH', body: JSON.stringify({ fields }) });
+      for (const id of removed) await api(`/api/photos/${id}`, { method: 'DELETE' }).catch(() => {});
       toast('Perubahan tersimpan');
       setEditing(false);
       setForm(null);
+      setPending({});
+      setRemoved([]);
       reload();
     } catch {
+      for (const id of uploaded) await api(`/api/photos/${id}`, { method: 'DELETE' }).catch(() => {});
       toast('Gagal menyimpan.');
     }
     setBusy(false);
@@ -328,6 +498,63 @@ export default function History({
                   </div>
 
                   <div className="edit-section">
+                    <div className="edit-title">Temuan, action plan &amp; bukti</div>
+                    {!Object.keys(form.finds).length && <div className="muted">Belum ada temuan.</div>}
+                    {Object.entries(form.finds)
+                      .sort(([a], [b]) => +a - +b)
+                      .map(([n, f]) => {
+                        const it = itemsOf(detail, form.unit).find((i) => i.n === +n);
+                        const status = f.status || 'Open';
+                        return (
+                          <div className="find-edit" key={n}>
+                            <div className="cl-title">
+                              <span className="cl-num">#{nl(+n)}</span>
+                              <span>{it?.t || 'Poin tambahan'}</span>
+                            </div>
+                            <label className="f">
+                              Keterangan temuan
+                              <textarea value={f.finding || ''} onChange={(e) => patchFinding(+n, { finding: e.target.value })} />
+                            </label>
+                            <label className="f">
+                              Action plan
+                              <textarea value={f.plan || ''} onChange={(e) => patchFinding(+n, { plan: e.target.value })} />
+                            </label>
+                            <div className="edit-grid">
+                              <label className="f">
+                                PIC
+                                <input value={f.pic || ''} onChange={(e) => patchFinding(+n, { pic: e.target.value })} />
+                              </label>
+                              <label className="f">
+                                Due date
+                                <input type="date" value={f.due || ''} onChange={(e) => patchFinding(+n, { due: e.target.value })} />
+                              </label>
+                              <label className="f">
+                                Status
+                                <select
+                                  value={status}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    patchFinding(+n, { status: v, closedAt: v === 'Closed' ? f.closedAt || today() : '' });
+                                  }}
+                                >
+                                  {STATUSES.map((s) => (
+                                    <option key={s} value={s}>
+                                      {s}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                            <div className="f" style={{ display: 'block' }}>Foto temuan</div>
+                            {photoEditor(+n, 'photos')}
+                            <div className="f" style={{ display: 'block' }}>Bukti action plan (wajib sebelum Closed)</div>
+                            {photoEditor(+n, 'donePhotos')}
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  <div className="edit-section">
                     <div className="edit-title">
                       {hasAns(detail) ? `Jawaban tiap poin · skor ${fmt(previewTotal)}` : 'Skor'}
                     </div>
@@ -349,7 +576,7 @@ export default function History({
                                         key={v}
                                         type="button"
                                         className={form.ans[i.n] === v ? `on on-${v}` : ''}
-                                        onClick={() => setForm({ ...form, ans: { ...form.ans, [i.n]: v } })}
+                                        onClick={() => setAnswer(i.n, v)}
                                       >
                                         {v === 'NA' ? 'N/A' : v}
                                       </button>
@@ -390,6 +617,7 @@ export default function History({
                       </div>
                     )}
                   </div>
+
                 </div>
                 <div className="drawer-foot">
                   <button
@@ -397,6 +625,8 @@ export default function History({
                     onClick={() => {
                       setEditing(false);
                       setForm(null);
+                      setPending({});
+                      setRemoved([]);
                     }}
                   >
                     Batal
@@ -422,26 +652,66 @@ export default function History({
                       ? unitById(detail.unit)?.items.find((i) => i.n === +n)
                       : catalog.items.find((i) => i.n === +n);
                     return (
-                      <div key={n}>
-                        <b className="mono">#{nl(+n)}</b> {it ? it.t : ''}
+                      <div key={n} className="find-detail">
+                        <div className="cl-title">
+                          <span className="cl-num">#{nl(+n)}</span>
+                          <span>{it ? it.t : 'Poin tambahan'}</span>
+                        </div>
                         <div className="find" style={{ background: 'var(--bad-bg)', padding: '6px 10px', borderRadius: 6, marginTop: 3 }}>
                           {f.finding}
                         </div>
-                        {(f.photos || []).length > 0 && (
-                          <div className="ph-list" style={{ marginTop: 6 }}>
-                            {(f.photos || []).map((p, k) => (
-                              <Image
-                                key={p}
-                                className="thumb"
-                                src={`/api/photos/${p}`}
-                                alt="Foto temuan"
-                                width={84}
-                                height={84}
-                                unoptimized
-                                onClick={() => openPhoto((f.photos || []).map((x) => `/api/photos/${x}`), k)}
-                              />
-                            ))}
+                        {(f.plan || f.pic || f.due || f.status) && (
+                          <div className="muted" style={{ fontSize: 12, display: 'grid', gap: 2 }}>
+                            {f.plan && (
+                              <div>
+                                <b>Action plan:</b> {f.plan}
+                              </div>
+                            )}
+                            <div>
+                              {f.pic && <>PIC: {f.pic} · </>}
+                              {f.due && <>Due: {dateLabel(f.due)} · </>}
+                              Status: {f.status || 'Open'}
+                              {f.closedAt ? ` · closed ${dateLabel(f.closedAt)}` : ''}
+                            </div>
                           </div>
+                        )}
+                        {(f.photos || []).length > 0 && (
+                          <>
+                            <div className="f" style={{ display: 'block', marginTop: 6 }}>Foto temuan</div>
+                            <div className="ph-list" style={{ marginTop: 4 }}>
+                              {(f.photos || []).map((p, k) => (
+                                <Image
+                                  key={p}
+                                  className="thumb"
+                                  src={`/api/photos/${p}`}
+                                  alt="Foto temuan"
+                                  width={84}
+                                  height={84}
+                                  unoptimized
+                                  onClick={() => openPhoto((f.photos || []).map((x) => `/api/photos/${x}`), k)}
+                                />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {(f.donePhotos || []).length > 0 && (
+                          <>
+                            <div className="f" style={{ display: 'block', marginTop: 6 }}>Bukti action plan</div>
+                            <div className="ph-list" style={{ marginTop: 4 }}>
+                              {(f.donePhotos || []).map((p, k) => (
+                                <Image
+                                  key={p}
+                                  className="thumb"
+                                  src={`/api/photos/${p}`}
+                                  alt="Bukti action plan"
+                                  width={84}
+                                  height={84}
+                                  unoptimized
+                                  onClick={() => openPhoto((f.donePhotos || []).map((x) => `/api/photos/${x}`), k)}
+                                />
+                              ))}
+                            </div>
+                          </>
                         )}
                       </div>
                     );

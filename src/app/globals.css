@@ -1917,6 +1917,26 @@ textarea:focus {
   color: var(--na);
 }
 
+/* ===== Edit temuan di riwayat ===== */
+.find-edit,
+.find-detail {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px;
+  background: var(--surface);
+}
+.find-edit .cl-title span:last-child {
+  font-weight: 600;
+}
+.find-edit textarea {
+  min-height: 64px;
+}
+.find-edit .ph-list {
+  margin-top: 2px;
+}
+
 /* ===== Kartu skor di form edit ===== */
 .score-field {
   display: grid;
