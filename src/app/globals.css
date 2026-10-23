@@ -1654,83 +1654,95 @@ textarea:focus {
   gap: 8px;
   align-items: center;
 }
-.area-tools {
+.area-toolbar {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  align-items: flex-end;
   gap: 10px;
   margin-bottom: 12px;
 }
-.area-tools .f {
-  flex: 1 1 220px;
+.area-search {
+  flex: 1 1 240px;
   max-width: 360px;
+  min-height: 38px;
 }
-.area-tools .cl-count {
+.area-count {
   margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
 }
-.area-grid {
+.area-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 18px;
 }
-.area-card {
+.area-item {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid var(--line);
+  align-items: center;
+  gap: 9px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
   border-radius: var(--r-md);
-  background: var(--surface);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.area-card:hover {
-  border-color: var(--neutral-300);
-  box-shadow: var(--shadow-sm);
+.area-item:hover {
+  border-color: var(--line);
+  background: var(--neutral-50);
 }
 .area-num {
   display: inline-grid;
   place-items: center;
   flex: none;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
-  border-radius: 6px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px;
+  border-radius: 7px;
   background: var(--surface2);
   color: var(--accent);
   font-family: var(--f-mono);
   font-size: 12px;
   font-weight: 600;
 }
-.area-main {
+.area-item .area-name {
   flex: 1;
   min-width: 0;
-  display: grid;
-  gap: 4px;
+  border-color: transparent;
+  background: transparent;
+  font-weight: 500;
 }
-.area-main input {
-  width: 100%;
+.area-item .area-name:hover {
+  border-color: var(--line);
+  background: var(--surface);
 }
-.area-id {
-  color: var(--muted);
-  font-family: var(--f-mono);
-  font-size: 11px;
+.area-item .area-name:focus {
+  border-color: var(--blue-400);
+  background: var(--surface);
 }
 .area-del {
   flex: none;
+  opacity: 0.5;
+}
+.area-item:hover .area-del,
+.area-del:focus-visible {
+  opacity: 1;
 }
 .area-foot {
   display: flex;
-  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px 16px;
   margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
   font-size: 12px;
 }
-.area-foot .muted {
-  font-size: 12px;
-}
-@media (max-width: 640px) {
-  .area-tools .cl-count {
+@media (max-width: 760px) {
+  .area-list {
+    grid-template-columns: 1fr;
+  }
+  .area-count {
     margin-left: 0;
   }
   .area-actions {
@@ -1739,9 +1751,6 @@ textarea:focus {
   .area-actions .btn {
     flex: 1;
     justify-content: center;
-  }
-  .area-grid {
-    grid-template-columns: 1fr;
   }
 }
 

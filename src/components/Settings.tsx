@@ -57,9 +57,7 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
           </p>
         </div>
         <div className="area-actions">
-          <button className="btn ghost" type="button" onClick={add}>
-            + Tambah area
-          </button>
+          {draft && <span className="pill warn">Belum disimpan</span>}
           {draft && (
             <button className="btn ghost" type="button" onClick={() => setDraft(null)}>
               Batal
@@ -71,37 +69,35 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
         </div>
       </div>
       <section className="card pnl">
-        <div className="area-tools">
-          <label className="f">
-            Cari area
-            <input
-              type="search"
-              value={q}
-              placeholder="Nama atau ID area"
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </label>
-          <span className="cl-count muted">
-            {shown.length} dari {list.length} area
-          </span>
+        <div className="area-toolbar">
+          <input
+            type="search"
+            className="area-search"
+            value={q}
+            placeholder="Cari area..."
+            aria-label="Cari area"
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <span className="area-count">{shown.length} area</span>
+          <button className="btn ghost sm" type="button" onClick={add}>
+            + Tambah area
+          </button>
         </div>
         {!shown.length && <div className="empty">Tidak ada area yang cocok.</div>}
-        <div className="area-grid">
+        <div className="area-list">
           {shown.map((a) => {
             const index = list.findIndex((x) => x.id === a.id);
             return (
-              <div className="area-card" key={a.id}>
+              <div className="area-item" key={a.id}>
                 <span className="area-num">{index + 1}</span>
-                <div className="area-main">
-                  <input
-                    type="text"
-                    value={a.name}
-                    placeholder={`Nama area ${index + 1}`}
-                    aria-label={`Nama area ${index + 1}`}
-                    onChange={(e) => edit(a.id, e.target.value)}
-                  />
-                  <span className="area-id">ID {a.id}</span>
-                </div>
+                <input
+                  type="text"
+                  className="area-name"
+                  value={a.name}
+                  placeholder={`Nama area ${index + 1}`}
+                  aria-label={`Nama area ${index + 1}`}
+                  onChange={(e) => edit(a.id, e.target.value)}
+                />
                 <button
                   type="button"
                   className="icon-btn area-del"
@@ -116,8 +112,8 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
           })}
         </div>
         <div className="area-foot">
-          <span className={`pill ${draft ? 'warn' : 'good'}`}>{draft ? 'Belum disimpan' : 'Tersimpan'}</span>
-          <span className="muted">Area yang dihapus tidak lagi tampil di dashboard, tetapi audit lama tetap tersimpan.</span>
+          <span>{list.length} area produksi</span>
+          <span>Urutan ini dipakai di form dan dashboard.</span>
         </div>
       </section>
     </>
