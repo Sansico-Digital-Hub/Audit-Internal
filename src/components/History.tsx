@@ -77,17 +77,30 @@ export default function History({
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Record<number, Partial<Record<'photos' | 'donePhotos', string[]>>>>({});
   const [removed, setRemoved] = useState<string[]>([]);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [farea, setFarea] = useState('all');
   const role = session?.role;
 
-  const list = [...audits, ...daudits].map(withCalc).sort((a, b) => -cmp(a, b));
-  const detail = list.find((a) => a.id === detailId) || null;
   const isDept = (a: Audit | DeptAudit): a is DeptAudit => 'unit' in a;
+  const all = [...audits, ...daudits].map(withCalc).sort((a, b) => -cmp(a, b));
+  const list = all.filter((a) => {
+    if (from && a.date < from) return false;
+    if (to && a.date > to) return false;
+    if (farea !== 'all') {
+      const [kind, id] = farea.split(':');
+      if (kind === 'p' ? isDept(a) || a.areaId !== id : !isDept(a) || a.unit !== id) return false;
+    }
+    return true;
+  });
+  const detail = all.find((a) => a.id === detailId) || null;
   const secsOf = (a: Audit | DeptAudit, unit: string) =>
     isDept(a) ? unitSecs(unitById(unit) || unitById(a.unit) || catalog.units[0]) : PRODUCT_SECTIONS;
   const itemsOf = (a: Audit | DeptAudit, unit: string) => (isDept(a) ? unitById(unit)?.items || [] : catalog.items);
   const previewTotal = detail && form && hasAns(detail) ? calc(form.ans, secsOf(detail, form.unit)).total : null;
+  const filtered = !!(from || to || farea !== 'all');
 
-  if (!list.length)
+  if (!all.length)
     return (
       <>
         <h2>Riwayat Audit</h2>
@@ -363,8 +376,54 @@ export default function History({
     <>
       <div>
         <h2>Riwayat Audit</h2>
-        <p className="muted" style={{ margin: '4px 0 0' }}>{list.length} audit tersimpan.</p>
+        <p className="muted" style={{ margin: '4px 0 0' }}>
+          {filtered ? `${list.length} dari ${all.length} audit` : `${list.length} audit tersimpan`}.
+        </p>
       </div>
+      <div className="filters">
+        <label className="f">
+          Dari
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </label>
+        <label className="f">
+          Sampai
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </label>
+        <label className="f">
+          Area / unit
+          <select value={farea} onChange={(e) => setFarea(e.target.value)}>
+            <option value="all">Semua area / unit</option>
+            <optgroup label="Produksi">
+              {areas.map((a) => (
+                <option key={'p:' + a.id} value={'p:' + a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Departemen">
+              {catalog.units.map((u) => (
+                <option key={'d:' + u.id} value={'d:' + u.id}>
+                  {u.dept === u.name ? u.name : `${u.dept} · ${u.name}`}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </label>
+        <button
+          className="btn ghost"
+          type="button"
+          disabled={!filtered}
+          onClick={() => {
+            setFrom('');
+            setTo('');
+            setFarea('all');
+          }}
+        >
+          Reset filter
+        </button>
+      </div>
+      {!list.length && <div className="card empty">Tidak ada audit pada filter ini.</div>}
+      {!!list.length && (
       <section className="card pnl">
         <div className="scroll">
           <table className="rtable">
@@ -423,6 +482,7 @@ export default function History({
           </table>
         </div>
       </section>
+      )}
 
       {detail && (
         <>
