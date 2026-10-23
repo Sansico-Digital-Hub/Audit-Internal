@@ -13,7 +13,10 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
   const { toast } = useApp();
   const [draft, setDraft] = useState<{ id: string; name: string }[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState('');
   const list = draft ?? areas;
+  const query = q.trim().toLowerCase();
+  const shown = list.filter((a) => !query || a.name.toLowerCase().includes(query) || a.id.toLowerCase().includes(query));
 
   function edit(id: string, name: string) {
     setDraft((d) => (d ?? areas).map((a) => (a.id === id ? { ...a, name } : a)));
@@ -46,42 +49,75 @@ export function AreasView({ areas, reload }: { areas: { id: string; name: string
 
   return (
     <>
-      <div>
-        <h2>Daftar Area</h2>
-        <p className="muted" style={{ margin: '4px 0 0' }}>
-          Tambah, ubah nama, atau hapus area produksi. Perubahan berlaku untuk form dan dashboard; audit lama tetap tersimpan
-          (area yang dihapus tidak lagi tampil di dashboard).
-        </p>
-      </div>
-      <section className="card pnl">
-        <div className="meta" style={{ padding: 0 }}>
-          {list.map((a, i) => (
-            <div className="area-row" key={a.id}>
-              <input
-                type="text"
-                value={a.name}
-                placeholder={`Nama area ${i + 1}`}
-                onChange={(e) => edit(a.id, e.target.value)}
-              />
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Hapus area"
-                onClick={() => remove(a.id)}
-                disabled={list.length <= 1}
-              >
-                <IconClose />
-              </button>
-            </div>
-          ))}
+      <div className="bar-top">
+        <div>
+          <h2>Daftar Area</h2>
+          <p className="muted" style={{ margin: '4px 0 0' }}>
+            Tambah, ubah nama, atau hapus area produksi. Perubahan berlaku untuk form dan dashboard; audit lama tetap tersimpan.
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+        <div className="area-actions">
           <button className="btn ghost" type="button" onClick={add}>
             + Tambah area
           </button>
-          <button className="btn" type="button" disabled={busy} onClick={save}>
-            Simpan
+          {draft && (
+            <button className="btn ghost" type="button" onClick={() => setDraft(null)}>
+              Batal
+            </button>
+          )}
+          <button className="btn" type="button" disabled={busy || !draft} onClick={save}>
+            {busy ? 'Menyimpan…' : 'Simpan'}
           </button>
+        </div>
+      </div>
+      <section className="card pnl">
+        <div className="area-tools">
+          <label className="f">
+            Cari area
+            <input
+              type="search"
+              value={q}
+              placeholder="Nama atau ID area"
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </label>
+          <span className="cl-count muted">
+            {shown.length} dari {list.length} area
+          </span>
+        </div>
+        {!shown.length && <div className="empty">Tidak ada area yang cocok.</div>}
+        <div className="area-grid">
+          {shown.map((a) => {
+            const index = list.findIndex((x) => x.id === a.id);
+            return (
+              <div className="area-card" key={a.id}>
+                <span className="area-num">{index + 1}</span>
+                <div className="area-main">
+                  <input
+                    type="text"
+                    value={a.name}
+                    placeholder={`Nama area ${index + 1}`}
+                    aria-label={`Nama area ${index + 1}`}
+                    onChange={(e) => edit(a.id, e.target.value)}
+                  />
+                  <span className="area-id">ID {a.id}</span>
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn area-del"
+                  aria-label="Hapus area"
+                  onClick={() => remove(a.id)}
+                  disabled={list.length <= 1}
+                >
+                  <IconClose />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <div className="area-foot">
+          <span className={`pill ${draft ? 'warn' : 'good'}`}>{draft ? 'Belum disimpan' : 'Tersimpan'}</span>
+          <span className="muted">Area yang dihapus tidak lagi tampil di dashboard, tetapi audit lama tetap tersimpan.</span>
         </div>
       </section>
     </>

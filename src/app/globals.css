@@ -1647,14 +1647,102 @@ textarea:focus {
   }
 }
 
-/* baris area (tambah/hapus) */
-.area-row {
+/* ===== Daftar area ===== */
+.area-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
+}
+.area-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.area-tools .f {
+  flex: 1 1 220px;
+  max-width: 360px;
+}
+.area-tools .cl-count {
+  margin-left: auto;
+}
+.area-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 8px;
 }
-.area-row input {
+.area-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.area-card:hover {
+  border-color: var(--neutral-300);
+  box-shadow: var(--shadow-sm);
+}
+.area-num {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--accent);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+.area-main {
   flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.area-main input {
+  width: 100%;
+}
+.area-id {
+  color: var(--muted);
+  font-family: var(--f-mono);
+  font-size: 11px;
+}
+.area-del {
+  flex: none;
+}
+.area-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.area-foot .muted {
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .area-tools .cl-count {
+    margin-left: 0;
+  }
+  .area-actions {
+    width: 100%;
+  }
+  .area-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+  .area-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ===== grup nav collapsed: sembunyikan anak & chevron (desktop rail) ===== */
