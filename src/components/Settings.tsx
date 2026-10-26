@@ -142,6 +142,7 @@ export function CustomItemsView() {
   const [edit, setEdit] = useState<string | null>(null);
   const [et, setEt] = useState('');
   const [er, setEr] = useState('');
+  const [ebw, setEbw] = useState('');
   const [busy, setBusy] = useState(false);
   const [bscope, setBscope] = useState('p');
   const [bq, setBq] = useState('');
@@ -149,6 +150,7 @@ export function CustomItemsView() {
   const [bedit, setBedit] = useState<number | null>(null);
   const [bt, setBt] = useState('');
   const [br, setBr] = useState('');
+  const [bw, setBw] = useState('');
 
   if (session?.role !== 'admin' && !setup)
     return <div className="card empty">Hanya admin yang bisa mengatur poin checklist.</div>;
@@ -180,39 +182,31 @@ export function CustomItemsView() {
     setBusy(false);
   }
 
-  function startBaseEdit(n: number, text: string, ref: string) {
+  function startBaseEdit(n: number, text: string, ref: string, weight?: number) {
     setBedit(n);
     setBt(text);
     setBr(ref);
+    setBw(weight != null ? String(weight) : '');
   }
 
   async function saveBase() {
     if (bedit == null) return;
-    setBusy(true);
-    try {
-      await api('/api/config/itemoverrides', { method: 'PUT', body: JSON.stringify({ scope: bscope, n: bedit, t: bt, r: br }) });
-      toast('Poin diperbarui');
-      setBedit(null);
-      refresh();
-    } catch {
-      toast('Gagal menyimpan poin.');
-    }
-    setBusy(false);
-  }
-
-  async function saveWeight(n: number, raw: string) {
-    const value = raw.trim();
-    if (value !== '' && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+    const weight = bw.trim();
+    if (weight !== '' && (!Number.isFinite(Number(weight)) || Number(weight) < 0)) {
       toast('Bobot poin harus angka ≥ 0.');
       return;
     }
     setBusy(true);
     try {
-      await api('/api/config/itemoverrides', { method: 'PUT', body: JSON.stringify({ scope: bscope, n, w: value }) });
-      toast('Bobot poin diperbarui');
+      await api('/api/config/itemoverrides', {
+        method: 'PUT',
+        body: JSON.stringify({ scope: bscope, n: bedit, t: bt, r: br, w: weight }),
+      });
+      toast('Poin diperbarui');
+      setBedit(null);
       refresh();
     } catch {
-      toast('Gagal menyimpan bobot poin.');
+      toast('Gagal menyimpan poin.');
     }
     setBusy(false);
   }
@@ -244,9 +238,14 @@ export function CustomItemsView() {
     const e = next.find((x) => x.scope === sc && x.n === n);
     if (!e) return;
     if (kind === 'edit') {
+      const item =
+        e.scope === 'p'
+          ? catalog.items.find((x) => x.n === e.n)
+          : catalog.units.find((u) => u.id === e.scope)?.items.find((x) => x.n === e.n);
       setEdit(key);
       setEt(e.t);
       setEr(e.r || '');
+      setEbw(item?.w != null ? String(item.w) : '');
       return;
     }
     if (kind === 'cancel') {
@@ -259,8 +258,22 @@ export function CustomItemsView() {
         toast('Teks poin tidak boleh kosong.');
         return;
       }
+      const weight = ebw.trim();
+      if (weight !== '' && (!Number.isFinite(Number(weight)) || Number(weight) < 0)) {
+        toast('Bobot poin harus angka ≥ 0.');
+        return;
+      }
       e.t = text;
       e.r = er.trim();
+      try {
+        await api('/api/config/itemoverrides', {
+          method: 'PUT',
+          body: JSON.stringify({ scope: e.scope, n: e.n, w: weight }),
+        });
+      } catch {
+        toast('Gagal menyimpan bobot poin.');
+        return;
+      }
       setEdit(null);
       await put(next, 'Poin diperbarui');
       return;
@@ -351,6 +364,17 @@ export function CustomItemsView() {
                         Acuan pemeriksaan (satu baris satu acuan)
                         <textarea value={br} onChange={(e) => setBr(e.target.value)} />
                       </label>
+                      <label className="f">
+                        Bobot poin (opsional)
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={bw}
+                          placeholder="Kosong = otomatis/sama rata"
+                          onChange={(e) => setBw(e.target.value)}
+                        />
+                      </label>
                     </div>
                   ) : (
                     <>
@@ -360,19 +384,6 @@ export function CustomItemsView() {
                   )}
                 </div>
                 <div className="acts">
-                  <label className="weight-field" title="Bobot relatif poin dalam seksi. Kosong = otomatis/sama rata.">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      defaultValue={it.w != null ? String(it.w) : ''}
-                      placeholder="Bobot"
-                      onBlur={(e) => saveWeight(it.n, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                      }}
-                    />
-                  </label>
                   {it.custom ? (
                     <span className="muted" style={{ fontSize: 12 }}>edit di daftar tambahan</span>
                   ) : ed ? (
@@ -385,7 +396,7 @@ export function CustomItemsView() {
                       </button>
                     </>
                   ) : (
-                    <button className="btn ghost sm" type="button" onClick={() => startBaseEdit(it.n, it.t, it.r)}>
+                    <button className="btn ghost sm" type="button" onClick={() => startBaseEdit(it.n, it.t, it.r, it.w)}>
                       Ubah
                     </button>
                   )}
@@ -473,6 +484,17 @@ export function CustomItemsView() {
                       <label className="f">
                         Acuan pemeriksaan
                         <textarea value={er} onChange={(ev) => setEr(ev.target.value)} />
+                      </label>
+                      <label className="f">
+                        Bobot poin (opsional)
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={ebw}
+                          placeholder="Kosong = otomatis/sama rata"
+                          onChange={(ev) => setEbw(ev.target.value)}
+                        />
                       </label>
                     </div>
                   ) : (
