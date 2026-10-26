@@ -58,6 +58,8 @@ interface Form {
   cats: string[];
   ans: Record<string, Answer>;
   finds: Record<string, Finding>;
+  manual: boolean;
+  recalc: boolean;
 }
 
 export default function History({
@@ -97,8 +99,41 @@ export default function History({
   const secsOf = (a: Audit | DeptAudit, unit: string) =>
     isDept(a) ? unitSecs(unitById(unit) || unitById(a.unit) || catalog.units[0]) : PRODUCT_SECTIONS;
   const itemsOf = (a: Audit | DeptAudit, unit: string) => (isDept(a) ? unitById(unit)?.items || [] : catalog.items);
-  const previewTotal = detail && form && hasAns(detail) ? calc(form.ans, secsOf(detail, form.unit)).total : null;
+  const weightsOf = (a: Audit | DeptAudit, unit: string) => {
+    const weights: Record<string, number> = {};
+    itemsOf(a, unit).forEach((i) => {
+      if (i.w != null) weights[i.n] = i.w;
+    });
+    return weights;
+  };
+  const previewTotal =
+    detail && form
+      ? form.manual
+        ? num(form.total)
+        : hasAns(detail)
+          ? calc(
+              form.ans,
+              secsOf(detail, form.unit),
+              form.recalc ? weightsOf(detail, form.unit) : detail.score?.weights || {},
+            ).total
+          : null
+      : null;
   const filtered = !!(from || to || farea !== 'all');
+
+  function autoScoreValues() {
+    if (!detail || !form) return null;
+    const cc = calc(form.ans, secsOf(detail, form.unit), weightsOf(detail, form.unit));
+    const sec: Record<string, string> = {};
+    PRODUCT_SECTIONS.forEach((s, i) => {
+      const p = cc.secs[i]?.pts;
+      sec[s.k] = p != null ? String(+p.toFixed(2)) : '';
+    });
+    return {
+      sec,
+      cats: cc.secs.map((s) => (s.pts != null ? String(+s.pts.toFixed(2)) : '')),
+      total: cc.total != null ? String(+cc.total.toFixed(1)) : '',
+    };
+  }
 
   if (!all.length)
     return (
@@ -138,18 +173,18 @@ export default function History({
       cats: [],
       ans: { ...(detail.ans || {}) },
       finds: JSON.parse(JSON.stringify(detail.finds || {})) as Record<string, Finding>,
+      manual: !!detail.score?.manual,
+      recalc: false,
     };
     setPending({});
     setRemoved([]);
     if (!dept) {
-      PRODUCT_SECTIONS.forEach((s) => {
-        const p = (detail.score as Record<string, number> | undefined)?.[s.k];
-        f.sec[s.k] = p != null ? String(p) : '';
+      PRODUCT_SECTIONS.forEach((s, i) => {
+        const p = detail.c.secs[i]?.pts;
+        f.sec[s.k] = p != null ? String(+p.toFixed(2)) : '';
       });
     } else {
-      const u = unitById(f.unit);
-      const cats = (detail.score?.cats as number[] | undefined) || [];
-      f.cats = (u?.cats || []).map((_, i) => (cats[i] != null ? String(cats[i]) : ''));
+      f.cats = detail.c.secs.map((s) => (s.pts != null ? String(+s.pts.toFixed(2)) : ''));
     }
     setForm(f);
     setEditing(true);
@@ -294,6 +329,38 @@ export default function History({
     );
   }
 
+  function scoreFields() {
+    if (!detail || !form) return null;
+    return (
+      <div className="edit-grid">
+        {isDept(detail)
+          ? (unitById(form.unit)?.cats || []).map((c, i) => (
+              <ScoreField
+                key={i}
+                name={c.name}
+                weight={c.w}
+                value={form.cats[i] || ''}
+                onChange={(v) => {
+                  const cats = [...form.cats];
+                  cats[i] = v;
+                  setForm({ ...form, cats });
+                }}
+              />
+            ))
+          : PRODUCT_SECTIONS.map((s) => (
+              <ScoreField
+                key={s.k}
+                name={s.name}
+                weight={s.w}
+                value={form.sec[s.k] || ''}
+                onChange={(v) => setForm({ ...form, sec: { ...form.sec, [s.k]: v } })}
+              />
+            ))}
+        <ScoreField name="Total" weight={100} value={form.total} onChange={(v) => setForm({ ...form, total: v })} total />
+      </div>
+    );
+  }
+
   async function save() {
     if (!detail || !form) return;
     const dept = isDept(detail);
@@ -313,6 +380,7 @@ export default function History({
           }
         }
       }
+      const weights = weightsOf(detail, form.unit);
       const fields: Record<string, unknown> = {
         date: form.date,
         auditor: form.auditor.trim(),
@@ -324,15 +392,46 @@ export default function History({
         fields.unit = form.unit;
         fields.unitName = u?.name || form.unit;
         fields.dept = u?.dept || '';
-        if (hasAns(detail)) fields.ans = form.ans;
-        else fields.score = { total: num(form.total), dm: (detail.score as { dm?: number } | undefined)?.dm ?? 0, cats: form.cats.map(num) };
+        if (hasAns(detail)) {
+          fields.ans = form.ans;
+          const score: Record<string, unknown> = { ...(detail.score || {}) };
+          if (form.manual || form.recalc || detail.score?.manual) {
+            score.manual = form.manual;
+            score.weights = weights;
+            score.dm = detail.c.dm;
+            if (form.manual) {
+              score.total = num(form.total);
+              score.cats = form.cats.map(num);
+            } else {
+              delete score.total;
+              delete score.cats;
+            }
+            fields.score = score;
+          }
+        } else {
+          fields.score = { total: num(form.total), dm: detail.c.dm, cats: form.cats.map(num) };
+        }
       } else {
         fields.areaId = form.areaId;
         fields.areaName = areas.find((a) => a.id === form.areaId)?.name || form.areaId;
         if (hasAns(detail)) {
           fields.ans = form.ans;
+          const score: Record<string, unknown> = { ...(detail.score || {}) };
+          if (form.manual || form.recalc || detail.score?.manual) {
+            score.manual = form.manual;
+            score.weights = weights;
+            score.dm = detail.c.dm;
+            if (form.manual) {
+              score.total = num(form.total);
+              PRODUCT_SECTIONS.forEach((s) => (score[s.k] = num(form.sec[s.k])));
+            } else {
+              delete score.total;
+              PRODUCT_SECTIONS.forEach((s) => delete score[s.k]);
+            }
+            fields.score = score;
+          }
         } else {
-          const score: Record<string, number | null> = { total: num(form.total), dm: (detail.score as { dm?: number } | undefined)?.dm ?? 0 };
+          const score: Record<string, number | null> = { total: num(form.total), dm: detail.c.dm };
           PRODUCT_SECTIONS.forEach((s) => (score[s.k] = num(form.sec[s.k])));
           fields.score = score;
         }
@@ -619,62 +718,71 @@ export default function History({
                       {hasAns(detail) ? `Jawaban tiap poin · skor ${fmt(previewTotal)}` : 'Skor'}
                     </div>
                     {hasAns(detail) ? (
-                      <div className="ans-list">
-                        {secsOf(detail, form.unit).map((s) => {
-                          const items = itemsOf(detail, form.unit).filter((i) => inSec(i, s));
-                          if (!items.length) return null;
-                          return (
-                            <div key={s.k} className="ans-group">
-                              <div className="ans-gtitle">{s.name}</div>
-                              {items.map((i) => (
-                                <div className="ans-row" key={i.n}>
-                                  <span className="num">{nl(i.n)}</span>
-                                  <span className="ans-t">{i.t}</span>
-                                  <span className="ans-seg">
-                                    {(['M', 'DM', 'NA'] as const).map((v) => (
-                                      <button
-                                        key={v}
-                                        type="button"
-                                        className={form.ans[i.n] === v ? `on on-${v}` : ''}
-                                        onClick={() => setAnswer(i.n, v)}
-                                      >
-                                        {v === 'NA' ? 'N/A' : v}
-                                      </button>
-                                    ))}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <>
+                        <div className="ans-list">
+                          {secsOf(detail, form.unit).map((s) => {
+                            const items = itemsOf(detail, form.unit).filter((i) => inSec(i, s));
+                            if (!items.length) return null;
+                            return (
+                              <div key={s.k} className="ans-group">
+                                <div className="ans-gtitle">{s.name}</div>
+                                {items.map((i) => (
+                                  <div className="ans-row" key={i.n}>
+                                    <span className="num">{nl(i.n)}</span>
+                                    <span className="ans-t">{i.t}</span>
+                                    <span className="ans-seg">
+                                      {(['M', 'DM', 'NA'] as const).map((v) => (
+                                        <button
+                                          key={v}
+                                          type="button"
+                                          className={form.ans[i.n] === v ? `on on-${v}` : ''}
+                                          onClick={() => setAnswer(i.n, v)}
+                                        >
+                                          {v === 'NA' ? 'N/A' : v}
+                                        </button>
+                                      ))}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="manual-row">
+                          <label className="manual-score">
+                            <input
+                              type="checkbox"
+                              checked={form.manual}
+                              onChange={(e) => {
+                                const auto = autoScoreValues();
+                                setForm({
+                                  ...form,
+                                  manual: e.target.checked,
+                                  recalc: !e.target.checked,
+                                  ...(auto || {}),
+                                });
+                              }}
+                            />
+                            <span>
+                              Gunakan skor manual untuk audit ini
+                              <small>Skor seksi dan total diisi sendiri, tidak dihitung dari jawaban.</small>
+                            </span>
+                          </label>
+                          <button
+                            className="btn ghost sm"
+                            type="button"
+                            onClick={() => {
+                              const auto = autoScoreValues();
+                              setForm({ ...form, manual: false, recalc: true, ...(auto || {}) });
+                            }}
+                          >
+                            Hitung ulang
+                          </button>
+                        </div>
+                        {form.manual && scoreFields()}
+                      </>
                     ) : (
-                      <div className="edit-grid">
-                        {isDept(detail)
-                          ? (unitById(form.unit)?.cats || []).map((c, i) => (
-                              <ScoreField
-                                key={i}
-                                name={c.name}
-                                weight={c.w}
-                                value={form.cats[i] || ''}
-                                onChange={(v) => {
-                                  const cats = [...form.cats];
-                                  cats[i] = v;
-                                  setForm({ ...form, cats });
-                                }}
-                              />
-                            ))
-                          : PRODUCT_SECTIONS.map((s) => (
-                              <ScoreField
-                                key={s.k}
-                                name={s.name}
-                                weight={s.w}
-                                value={form.sec[s.k] || ''}
-                                onChange={(v) => setForm({ ...form, sec: { ...form.sec, [s.k]: v } })}
-                              />
-                            ))}
-                        <ScoreField name="Total" weight={100} value={form.total} onChange={(v) => setForm({ ...form, total: v })} total />
-                      </div>
+                      scoreFields()
                     )}
                   </div>
 

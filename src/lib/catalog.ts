@@ -9,7 +9,7 @@ export interface Catalog {
   custom: CustomItem[];
 }
 
-export type ItemOverrides = Record<string, Record<string, { t?: string; r?: string }>>;
+export type ItemOverrides = Record<string, Record<string, { t?: string; r?: string; w?: number }>>;
 
 export function buildCatalog(custom: CustomItem[] = [], overrides: ItemOverrides = {}): Catalog {
   const items: Item[] = SEED_ITEMS.map((i) => ({ ...i }));
@@ -39,7 +39,7 @@ export function buildCatalog(custom: CustomItem[] = [], overrides: ItemOverrides
 
   const applyOv = (scope: string, it: Item): Item => {
     const o = overrides?.[scope]?.[String(it.n)];
-    return o ? { ...it, t: o.t ?? it.t, r: o.r ?? it.r } : it;
+    return o ? { ...it, t: o.t ?? it.t, r: o.r ?? it.r, w: o.w ?? it.w } : it;
   };
 
   return {

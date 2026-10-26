@@ -43,11 +43,15 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
   const sections: Section[] = isD ? unitSecs(unit) : catalog.sections;
   const allItems: Item[] = isD ? unit.items : catalog.items;
   const items = allItems.filter((i) => !i.off);
+  const weights: Record<string, number> = {};
+  items.forEach((i) => {
+    if (i.w != null) weights[i.n] = i.w;
+  });
   // Default setiap poin = M (hijau) sampai user mengubahnya.
   const ans: Record<string, Answer> = {};
   items.forEach((i) => (ans[i.n] = 'M'));
   Object.assign(ans, form.ans);
-  const c = calc(ans, sections);
+  const c = calc(ans, sections, weights);
   const inSec = (i: Item, s: Section) => (i.n >= s.from && i.n <= s.to) || (s.extra || []).includes(i.n);
 
   const key = isD ? DKEYD : DKEY;
@@ -102,7 +106,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
       toast(`${miss.length} poin belum lengkap. DM wajib temuan dan foto (nomor ${miss.slice(0, 6).join(', ')}${miss.length > 6 ? '…' : ''}).`);
       return;
     }
-    const cc = calc(ans, sections);
+    const cc = calc(ans, sections, weights);
     const finds: Record<string, { finding: string; plan: string; pic: string; due: string; status: string; photos: string[] }> = {};
     items.forEach((i) => {
       if (ans[i.n] === 'DM') finds[i.n] = { finding: (form.find[i.n] || '').trim(), plan: '', pic: '', due: '', status: 'Open', photos: [] };
@@ -141,7 +145,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
           auditee: form.auditee.trim(),
           ans,
           finds,
-          score: { total: +cc.total!.toFixed(2), dm: cc.dm, cats: cc.secs.map((s) => +(s.pts ?? 0).toFixed(2)) },
+          score: { total: +cc.total!.toFixed(2), dm: cc.dm, cats: cc.secs.map((s) => +(s.pts ?? 0).toFixed(2)), weights },
           createdAt: now(),
         };
       } else {
@@ -161,6 +165,7 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
             system: +(cc.secs[2].pts ?? 0).toFixed(2),
             area: +(cc.secs[3].pts ?? 0).toFixed(2),
             dm: cc.dm,
+            weights,
           },
           createdAt: now(),
         };

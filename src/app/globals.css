@@ -964,6 +964,22 @@ svg .an {
   font-size: 12px;
   font-weight: 600;
 }
+.weight-field {
+  display: grid;
+  gap: 2px;
+  flex: none;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.weight-field input {
+  width: 76px;
+  min-height: 32px;
+  padding: 4px 7px;
+  font-size: 12px;
+}
 .cl-text {
   margin-top: 6px;
   line-height: 1.45;
@@ -2032,6 +2048,37 @@ textarea:focus {
 }
 .find-edit .ph-list {
   margin-top: 2px;
+}
+
+.manual-row {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.manual-score {
+  display: flex;
+  flex: 1 1 260px;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.manual-score input {
+  margin-top: 2px;
+  flex: none;
+}
+.manual-score small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
 }
 
 /* ===== Kartu skor di form edit ===== */

@@ -200,6 +200,23 @@ export function CustomItemsView() {
     setBusy(false);
   }
 
+  async function saveWeight(n: number, raw: string) {
+    const value = raw.trim();
+    if (value !== '' && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+      toast('Bobot poin harus angka ≥ 0.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await api('/api/config/itemoverrides', { method: 'PUT', body: JSON.stringify({ scope: bscope, n, w: value }) });
+      toast('Bobot poin diperbarui');
+      refresh();
+    } catch {
+      toast('Gagal menyimpan bobot poin.');
+    }
+    setBusy(false);
+  }
+
   async function add() {
     const text = t.trim();
     const ref = r.trim();
@@ -260,14 +277,15 @@ export function CustomItemsView() {
         <h2>Poin Checklist Tambahan</h2>
         <p className="muted" style={{ margin: '4px 0 0' }}>
           Tambah poin audit sendiri ke area produksi atau unit departemen. Poin baru muncul di form audit berikutnya, ditandai
-          &quot;Tambahan&quot; dengan nomor T1, T2, dan seterusnya. Audit yang sudah tersimpan tidak berubah. Bobot tiap seksi tetap,
-          skor seksi = M ÷ (M + DM) × bobot, jadi poin baru ikut menentukan persentase seksi yang dipilih.
+          &quot;Tambahan&quot; dengan nomor T1, T2, dan seterusnya. Bobot tiap seksi tetap; bobot poin mengatur pengaruh relatif
+          antarpoin dalam seksi yang sama. Kosongkan bobot untuk memakai pembagian otomatis.
         </p>
       </div>
       <section className="card pnl">
         <h3>Edit poin yang sudah ada</h3>
         <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-          Ubah teks/acuan poin bawaan. Perubahan berlaku untuk form &amp; audit berikutnya (audit lama tidak berubah).
+          Ubah teks, acuan, atau bobot poin. Bobot baru dipakai audit berikutnya; audit lama tetap memakai skor tersimpan
+          sampai dihitung ulang atau diisi skor manual di Riwayat.
         </p>
         <label className="f" style={{ maxWidth: 360 }}>
           Untuk
@@ -342,6 +360,20 @@ export function CustomItemsView() {
                   )}
                 </div>
                 <div className="acts">
+                  <label className="weight-field" title="Bobot relatif poin dalam seksi. Kosong = otomatis/sama rata.">
+                    Bobot
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      defaultValue={it.w != null ? String(it.w) : ''}
+                      placeholder="auto"
+                      onBlur={(e) => saveWeight(it.n, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                      }}
+                    />
+                  </label>
                   {it.custom ? (
                     <span className="muted" style={{ fontSize: 12 }}>edit di daftar tambahan</span>
                   ) : ed ? (

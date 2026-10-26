@@ -4,6 +4,7 @@ export interface Item {
   n: number;
   t: string;
   r: string;
+  w?: number;
   custom?: boolean;
   off?: boolean;
 }
@@ -66,6 +67,15 @@ export interface Calc {
   imp?: boolean;
 }
 
+export interface StoredScore {
+  total?: number;
+  dm?: number;
+  manual?: boolean;
+  cats?: number[];
+  weights?: Record<string, number>;
+  [key: string]: number | boolean | number[] | Record<string, number> | undefined;
+}
+
 export interface Audit {
   id: string;
   date: string;
@@ -75,7 +85,7 @@ export interface Audit {
   auditee: string;
   ans: Record<string, Answer>;
   finds: Record<string, Finding>;
-  score?: Partial<Record<string, number>>;
+  score?: StoredScore;
   createdAt: number;
   c?: Calc;
   imported?: boolean;
@@ -91,7 +101,7 @@ export interface DeptAudit {
   auditee: string;
   ans: Record<string, Answer>;
   finds: Record<string, Finding>;
-  score?: Partial<Record<string, number>>;
+  score?: StoredScore;
   createdAt: number;
   c?: Calc;
 }
