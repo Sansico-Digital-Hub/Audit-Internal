@@ -361,13 +361,12 @@ export function CustomItemsView() {
                 </div>
                 <div className="acts">
                   <label className="weight-field" title="Bobot relatif poin dalam seksi. Kosong = otomatis/sama rata.">
-                    Bobot
                     <input
                       type="number"
                       min="0"
                       step="0.1"
                       defaultValue={it.w != null ? String(it.w) : ''}
-                      placeholder="auto"
+                      placeholder="Bobot"
                       onBlur={(e) => saveWeight(it.n, e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') (e.target as HTMLInputElement).blur();

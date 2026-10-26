@@ -944,6 +944,7 @@ svg .an {
   gap: 6px;
   flex-wrap: wrap;
   flex: none;
+  align-items: center;
 }
 .cl-title {
   display: flex;
@@ -965,20 +966,50 @@ svg .an {
   font-weight: 600;
 }
 .weight-field {
-  display: grid;
-  gap: 2px;
+  display: inline-flex;
+  align-items: center;
   flex: none;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  width: 68px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
   color: var(--muted);
 }
+.weight-field:focus-within {
+  border-color: var(--blue-400);
+  outline: 2px solid var(--blue-100);
+  outline-offset: 0;
+}
 .weight-field input {
-  width: 76px;
+  width: 100%;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  text-align: center;
+}
+.weight-field input::placeholder {
+  color: var(--muted);
+  font-family: var(--f-body);
+  font-size: 10.5px;
+}
+.weight-field input:focus {
+  outline: 0;
+  border: 0;
+}
+.clrow .acts .btn {
+  height: 32px;
   min-height: 32px;
-  padding: 4px 7px;
-  font-size: 12px;
+  min-width: 68px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .cl-text {
   margin-top: 6px;
