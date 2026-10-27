@@ -20,6 +20,7 @@ interface Row {
   area: string;
   areaId: string;
   date: string;
+  createdAt: number;
   f: Finding;
 }
 
@@ -49,17 +50,23 @@ export default function Findings({
   VA.forEach((a) =>
     Object.entries(a.finds || {}).forEach(([n, f]) => {
       const it = catalog.items.find((i) => i.n === +n);
-      out.push({ src: 'p', aid: a.id, n: +n, t: it ? it.t : '', area: a.areaName || resolveArea(a.areaId), areaId: a.areaId, date: a.date, f });
+      out.push({ src: 'p', aid: a.id, n: +n, t: it ? it.t : '', area: a.areaName || resolveArea(a.areaId), areaId: a.areaId, date: a.date, createdAt: a.createdAt, f });
     }),
   );
   VD.forEach((a) => {
     const u = unitById(a.unit);
     Object.entries(a.finds || {}).forEach(([n, f]) => {
       const it = u?.items.find((i) => i.n === +n);
-      out.push({ src: 'd', aid: a.id, n: +n, t: it ? it.t : '', area: a.unitName || u?.name || a.unit, areaId: a.unit, date: a.date, f });
+      out.push({ src: 'd', aid: a.id, n: +n, t: it ? it.t : '', area: a.unitName || u?.name || a.unit, areaId: a.unit, date: a.date, createdAt: a.createdAt, f });
     });
   });
-  let list = out.sort((x, y) => (x.f.due || '9999').localeCompare(y.f.due || '9999'));
+  // Default: temuan terbaru di atas (tanggal audit, lalu waktu simpan).
+  let list = out.sort(
+    (x, y) =>
+      y.date.localeCompare(x.date) ||
+      (y.createdAt || 0) - (x.createdAt || 0) ||
+      (x.f.due || '9999').localeCompare(y.f.due || '9999'),
+  );
 
   const t = today();
   if (filters.fstatus === 'open') list = list.filter((x) => (x.f.status || 'Open') !== 'Closed');
