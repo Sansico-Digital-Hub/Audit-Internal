@@ -102,6 +102,27 @@ export default function Findings({
     setBusy(false);
   }
 
+  async function removePhoto(x: Row, key: 'photos' | 'donePhotos', id: string) {
+    if ((x.f.status || 'Open') === 'Closed') {
+      toast('Temuan sudah Closed. Foto tidak dapat dihapus/diganti.');
+      return;
+    }
+    const ids = (x.f[key] || []).filter((p) => p !== id);
+    setBusy(true);
+    try {
+      await api(`/api/${x.src === 'd' ? 'daudits' : 'audits'}/${x.aid}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ n: String(x.n), patch: { [key]: ids } }),
+      });
+      await api(`/api/photos/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      toast('Foto dihapus');
+    } catch {
+      toast('Gagal menghapus foto.');
+    }
+    setBusy(false);
+    reload();
+  }
+
   async function addPhotos(x: Row, key: 'photos' | 'donePhotos', files: FileList | null) {
     if (!files) return;
     const ids = [...(x.f[key] || [])];
@@ -139,7 +160,8 @@ export default function Findings({
       <div>
         <h2>{role === 'prod' ? 'Action Plan · ' + scopeName : 'Tindak Lanjut Temuan'}</h2>
         <p className="muted" style={{ margin: '4px 0 0' }}>
-          Isi action plan, PIC, dan due date. Untuk Closed, unggah foto bukti action plan lebih dulu. Skor audit tidak berubah.
+          Isi action plan, PIC, dan due date. Foto bukti bisa dihapus/diganti sebelum Closed; setelah Closed foto tidak bisa
+          diubah. Skor audit tidak berubah.
         </p>
       </div>
 
@@ -200,22 +222,39 @@ export default function Findings({
           emptyText: string,
           canUpload: boolean,
           hint?: string,
+          removable?: boolean,
+          onRemove?: (id: string) => void,
         ) => {
           const urls = (ids || []).map((p) => `/api/photos/${p}`);
           const dk = x.src + x.aid + x.n + ':' + key;
           const photos = urls.length ? (
             <div className="ph-list">
               {urls.map((u, k) => (
-                <Image
-                  key={u}
-                  className="thumb"
-                  src={u}
-                  alt="Foto bukti temuan"
-                  width={84}
-                  height={84}
-                  unoptimized
-                  onClick={() => openPhoto(urls, k)}
-                />
+                <div className="ph-item" key={u}>
+                  <Image
+                    className="thumb"
+                    src={u}
+                    alt="Foto bukti temuan"
+                    width={84}
+                    height={84}
+                    unoptimized
+                    onClick={() => openPhoto(urls, k)}
+                  />
+                  {removable && onRemove && ids?.[k] && (
+                    <button
+                      type="button"
+                      className="ph-x"
+                      aria-label="Hapus foto"
+                      title="Hapus foto"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove(ids[k]);
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
@@ -319,7 +358,11 @@ export default function Findings({
                 x.f.donePhotos,
                 'Belum ada bukti.',
                 canAddDonePhoto,
-                st === 'Closed' ? 'Temuan sudah Closed. Foto bukti tidak dapat ditambah lagi.' : undefined,
+                st === 'Closed'
+                  ? 'Temuan sudah Closed. Foto bukti tidak dapat ditambah/diganti lagi.'
+                  : 'Klik × pada foto untuk menghapus, lalu unggah foto pengganti.',
+                canAddDonePhoto,
+                (id) => removePhoto(x, 'donePhotos', id),
               )}
             </div>
           </article>
