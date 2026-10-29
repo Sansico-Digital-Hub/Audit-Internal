@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useApp } from './ctx';
+import { IconAlert } from './icons';
 import type { Filters } from './useFilters';
 import { MAXPH_ACTION, STATUSES } from '@/lib/constants';
 import { api, compress, download } from '@/lib/client';
@@ -41,6 +42,7 @@ export default function Findings({
   const isDept = /^d/.test(session?.area || '');
   const [busy, setBusy] = useState(false);
   const [dragKey, setDragKey] = useState<string | null>(null);
+  const [confirmPhoto, setConfirmPhoto] = useState<{ x: Row; key: 'photos' | 'donePhotos'; id: string } | null>(null);
 
   const resolveArea = (id: string) => areas.find((a) => a.id === id)?.name || id;
   const VA = role === 'prod' ? audits.filter((a) => a.areaId === session?.area) : audits;
@@ -322,7 +324,7 @@ export default function Findings({
                     ? 'Temuan sudah Closed. Foto temuan tidak dapat ditambah/diganti lagi.'
                     : 'Klik × pada foto untuk menghapus, lalu unggah foto pengganti.',
                 canAddFindingPhoto,
-                (id) => removePhoto(x, 'photos', id),
+                (id) => setConfirmPhoto({ x, key: 'photos', id }),
               )}
             </div>
             <label className="f">
@@ -368,7 +370,7 @@ export default function Findings({
                   ? 'Temuan sudah Closed. Foto bukti tidak dapat ditambah/diganti lagi.'
                   : 'Klik × pada foto untuk menghapus, lalu unggah foto pengganti.',
                 canAddDonePhoto,
-                (id) => removePhoto(x, 'donePhotos', id),
+                (id) => setConfirmPhoto({ x, key: 'donePhotos', id }),
               )}
             </div>
           </article>
@@ -381,6 +383,34 @@ export default function Findings({
           <button className="btn ghost sm" type="button" onClick={() => router.push(isDept ? '/departemen' : '/dashboard')}>
             Kembali ke tren
           </button>
+        </div>
+      )}
+      {confirmPhoto && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirm-photo-title">
+          <div className="modal-card">
+            <span className="modal-ic">
+              <IconAlert size={22} />
+            </span>
+            <h3 id="confirm-photo-title">{confirmPhoto.key === 'photos' ? 'Hapus foto temuan?' : 'Hapus bukti action plan?'}</h3>
+            <p className="muted">Foto yang dihapus tidak dapat dikembalikan. Pastikan foto ini memang salah.</p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn ghost" type="button" onClick={() => setConfirmPhoto(null)}>
+                Batal
+              </button>
+              <button
+                className="btn danger"
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  const target = confirmPhoto;
+                  setConfirmPhoto(null);
+                  removePhoto(target.x, target.key, target.id);
+                }}
+              >
+                Hapus foto
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {busy && <div className="toast">Menyimpan…</div>}
