@@ -214,7 +214,7 @@ export default function Findings({
       {list.map((x) => {
         const st = x.f.status || 'Open';
         const od = st !== 'Closed' && x.f.due && x.f.due < t;
-        const canAddFindingPhoto = role !== 'prod';
+        const canAddFindingPhoto = role !== 'prod' && st !== 'Closed';
         const canAddDonePhoto = st !== 'Closed';
         const photoBlock = (
           key: 'photos' | 'donePhotos',
@@ -316,7 +316,13 @@ export default function Findings({
                 x.f.photos,
                 'Tidak ada foto temuan',
                 canAddFindingPhoto,
-                role === 'prod' ? 'Foto temuan hanya dapat diunggah oleh auditor/admin.' : undefined,
+                role === 'prod'
+                  ? 'Foto temuan hanya dapat diunggah oleh auditor/admin.'
+                  : st === 'Closed'
+                    ? 'Temuan sudah Closed. Foto temuan tidak dapat ditambah/diganti lagi.'
+                    : 'Klik × pada foto untuk menghapus, lalu unggah foto pengganti.',
+                canAddFindingPhoto,
+                (id) => removePhoto(x, 'photos', id),
               )}
             </div>
             <label className="f">
