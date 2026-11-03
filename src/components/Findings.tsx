@@ -311,7 +311,14 @@ export default function Findings({
             </div>
             <div className="muted">{x.t}</div>
             <div className="find">{x.f.finding}</div>
-            {x.f.rootCause && <div className="muted"><b>Root cause:</b> {x.f.rootCause}</div>}
+            <label className="f">
+              Root cause
+              <textarea
+                defaultValue={x.f.rootCause || ''}
+                placeholder="Penyebab utama temuan"
+                onBlur={(e) => patch(x, { rootCause: e.target.value })}
+              />
+            </label>
             <div>
               <div className="f" style={{ display: 'block', marginBottom: 6 }}>Foto temuan</div>
               {photoBlock(
