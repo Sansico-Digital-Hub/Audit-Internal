@@ -21,6 +21,7 @@ export const audits = pgTable('audits', {
   auditee: text('auditee').notNull(),
   ans: jsonb('ans').$type<Record<string, string>>().notNull(),
   finds: jsonb('finds').$type<Record<string, unknown>>().notNull().default({}),
+  rootCause: jsonb('root_cause').$type<Record<string, string>>().notNull().default({}),
   score: jsonb('score').$type<Record<string, number>>(),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });
@@ -35,6 +36,7 @@ export const deptAudits = pgTable('dept_audits', {
   auditee: text('auditee').notNull(),
   ans: jsonb('ans').$type<Record<string, string>>().notNull(),
   finds: jsonb('finds').$type<Record<string, unknown>>().notNull().default({}),
+  rootCause: jsonb('root_cause').$type<Record<string, string>>().notNull().default({}),
   score: jsonb('score').$type<Record<string, number>>(),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 });

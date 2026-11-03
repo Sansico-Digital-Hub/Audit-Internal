@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { audits, photos } from '@/lib/db/schema';
 import { readSession } from '@/lib/auth';
+import { rootCauseMap } from '@/lib/findings';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const s = await readSession();
@@ -45,6 +46,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     finds[b.n] = { ...((finds[b.n] as object) || {}), ...b.patch };
     set.finds = finds;
   }
+  if (set.finds) set.rootCause = rootCauseMap(set.finds);
   if (!Object.keys(set).length) return NextResponse.json({ ok: true, changed: 0 });
 
   await db.update(audits).set(set).where(eq(audits.id, id));

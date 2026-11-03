@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { audits } from '@/lib/db/schema';
 import { readSession } from '@/lib/auth';
+import { rootCauseMap } from '@/lib/findings';
 
 export async function GET() {
   const rows = await db.select().from(audits);
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
     auditee: String(b.auditee),
     ans: b.ans || {},
     finds: b.finds || {},
+    rootCause: rootCauseMap(b.finds),
     score: b.score || null,
     createdAt: Number(b.createdAt) || Date.now(),
   };
