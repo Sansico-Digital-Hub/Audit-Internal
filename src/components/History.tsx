@@ -202,7 +202,7 @@ export default function History({
     if (!form) return;
     const finds = { ...form.finds };
     if (v === 'DM' && !finds[n]) {
-      finds[n] = { finding: '', plan: '', pic: '', due: '', status: 'Open', photos: [], donePhotos: [] };
+      finds[n] = { finding: '', rootCause: '', plan: '', pic: '', due: '', status: 'Open', photos: [], donePhotos: [] };
     }
     setForm({ ...form, ans: { ...form.ans, [n]: v }, finds });
   }
@@ -675,6 +675,10 @@ export default function History({
                               <textarea value={f.finding || ''} onChange={(e) => patchFinding(+n, { finding: e.target.value })} />
                             </label>
                             <label className="f">
+                              Root cause
+                              <textarea value={f.rootCause || ''} onChange={(e) => patchFinding(+n, { rootCause: e.target.value })} />
+                            </label>
+                            <label className="f">
                               Action plan
                               <textarea value={f.plan || ''} onChange={(e) => patchFinding(+n, { plan: e.target.value })} />
                             </label>
@@ -828,6 +832,11 @@ export default function History({
                         <div className="find" style={{ background: 'var(--bad-bg)', padding: '6px 10px', borderRadius: 6, marginTop: 3 }}>
                           {f.finding}
                         </div>
+                        {f.rootCause && (
+                          <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                            <b>Root cause:</b> {f.rootCause}
+                          </div>
+                        )}
                         {(f.plan || f.pic || f.due || f.status) && (
                           <div className="muted" style={{ fontSize: 12, display: 'grid', gap: 2 }}>
                             {f.plan && (

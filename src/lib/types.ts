@@ -39,6 +39,7 @@ export interface Section {
 
 export interface Finding {
   finding: string;
+  rootCause?: string;
   plan?: string;
   pic?: string;
   due?: string;

@@ -107,9 +107,9 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
       return;
     }
     const cc = calc(ans, sections, weights);
-    const finds: Record<string, { finding: string; plan: string; pic: string; due: string; status: string; photos: string[] }> = {};
+    const finds: Record<string, { finding: string; rootCause: string; plan: string; pic: string; due: string; status: string; photos: string[] }> = {};
     items.forEach((i) => {
-      if (ans[i.n] === 'DM') finds[i.n] = { finding: (form.find[i.n] || '').trim(), plan: '', pic: '', due: '', status: 'Open', photos: [] };
+      if (ans[i.n] === 'DM') finds[i.n] = { finding: (form.find[i.n] || '').trim(), rootCause: (form.rootCause[i.n] || '').trim(), plan: '', pic: '', due: '', status: 'Open', photos: [] };
     });
 
     const id = isD
@@ -301,6 +301,14 @@ export default function InputForm({ mode }: { mode: 'p' | 'd' }) {
                       value={form.find[i.n] || ''}
                       placeholder="Keterangan temuan: apa, di mana, kondisi aktual"
                       onChange={(e) => update({ find: { ...form.find, [i.n]: e.target.value } })}
+                    />
+                  </label>
+                  <label className="f">
+                    Root cause
+                    <textarea
+                      value={form.rootCause[i.n] || ''}
+                      placeholder="Penyebab utama temuan"
+                      onChange={(e) => update({ rootCause: { ...form.rootCause, [i.n]: e.target.value } })}
                     />
                   </label>
                   <div className="ph">

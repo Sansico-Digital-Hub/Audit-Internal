@@ -42,6 +42,7 @@ export interface FindingExportRow {
   n: number;
   t: string;
   finding: string;
+  rootCause?: string;
   plan?: string;
   pic?: string;
   due?: string;
@@ -53,7 +54,7 @@ export interface FindingExportRow {
 
 export function csvFinds(rowsIn: FindingExportRow[]) {
   const rows: (string | number)[][] = [
-    ['Tanggal', 'Area', 'No', 'Poin audit', 'Temuan', 'Action plan', 'PIC', 'Due date', 'Status', 'Jumlah foto temuan', 'Jumlah bukti action plan', 'Tanggal closed'],
+    ['Tanggal', 'Area', 'No', 'Poin audit', 'Temuan', 'Root cause', 'Action plan', 'PIC', 'Due date', 'Status', 'Jumlah foto temuan', 'Jumlah bukti action plan', 'Tanggal closed'],
   ];
   rowsIn.forEach((x) =>
     rows.push([
@@ -62,6 +63,7 @@ export function csvFinds(rowsIn: FindingExportRow[]) {
       nl(x.n),
       x.t,
       x.finding,
+      x.rootCause || '',
       x.plan || '',
       x.pic || '',
       x.due || '',

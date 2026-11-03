@@ -10,6 +10,7 @@ export interface Draft {
   unitId?: string;
   ans: Record<number, Answer>;
   find: Record<number, string>;
+  rootCause: Record<number, string>;
   photos: Record<number, string[]>;
 }
 
@@ -17,10 +18,10 @@ export const DKEY = 'audit-internal-draft-v2';
 export const DKEYD = 'audit-internal-draft-dept-v2';
 
 export function newForm(): Draft {
-  return { date: todayStr(), auditor: '', auditee: '', areaId: 'a1', ans: {}, find: {}, photos: {} };
+  return { date: todayStr(), auditor: '', auditee: '', areaId: 'a1', ans: {}, find: {}, rootCause: {}, photos: {} };
 }
 export function newDForm(): Draft {
-  return { date: todayStr(), auditor: '', auditee: '', unitId: 'd1', ans: {}, find: {}, photos: {} };
+  return { date: todayStr(), auditor: '', auditee: '', unitId: 'd1', ans: {}, find: {}, rootCause: {}, photos: {} };
 }
 
 export const now = () => Date.now();

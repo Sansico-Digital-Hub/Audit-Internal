@@ -202,7 +202,7 @@ export default function Findings({
             className="btn ghost"
             type="button"
             onClick={() => {
-              const rows: FindingExportRow[] = list.map((x) => ({ date: x.date, area: x.area, n: x.n, t: x.t, finding: x.f.finding, plan: x.f.plan, pic: x.f.pic, due: x.f.due, status: x.f.status, photos: x.f.photos, donePhotos: x.f.donePhotos, closedAt: x.f.closedAt }));
+              const rows: FindingExportRow[] = list.map((x) => ({ date: x.date, area: x.area, n: x.n, t: x.t, finding: x.f.finding, rootCause: x.f.rootCause, plan: x.f.plan, pic: x.f.pic, due: x.f.due, status: x.f.status, photos: x.f.photos, donePhotos: x.f.donePhotos, closedAt: x.f.closedAt }));
               download('temuan-audit-internal.csv', csvFinds(rows));
             }}
           >
@@ -311,6 +311,7 @@ export default function Findings({
             </div>
             <div className="muted">{x.t}</div>
             <div className="find">{x.f.finding}</div>
+            {x.f.rootCause && <div className="muted"><b>Root cause:</b> {x.f.rootCause}</div>}
             <div>
               <div className="f" style={{ display: 'block', marginBottom: 6 }}>Foto temuan</div>
               {photoBlock(
