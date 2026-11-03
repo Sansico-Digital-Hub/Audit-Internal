@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client';
-import { SESSION_TTL_HOURS } from '@/lib/constants';
 import { defaultPath } from '@/lib/nav';
 import { SEED_UNITS } from '@/lib/seed-data';
 import { IconDownload, IconEye, IconEyeOff, IconLock } from './icons';
@@ -21,7 +20,7 @@ interface InstallPrompt extends Event {
 
 const SHORT: Record<Role, string> = { prod: 'Departemen', auditor: 'Auditor', admin: 'Admin' };
 
-export default function Login({ initialExpired = false }: { initialExpired?: boolean }) {
+export default function Login() {
   const router = useRouter();
   const [cfg, setCfg] = useState<Cfg | null>(null);
   const [cfgErr, setCfgErr] = useState('');
@@ -31,7 +30,7 @@ export default function Login({ initialExpired = false }: { initialExpired?: boo
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [showPin, setShowPin] = useState(false);
-  const [expired, setExpired] = useState(initialExpired);
+  const [expired, setExpired] = useState(false);
   const [installEvt, setInstallEvt] = useState<InstallPrompt | null>(null);
   const [installBusy, setInstallBusy] = useState(false);
   const [installed, setInstalled] = useState(false);
@@ -68,18 +67,16 @@ export default function Login({ initialExpired = false }: { initialExpired?: boo
     return () => window.removeEventListener('pageshow', onShow);
   }, []);
 
-  // Pemberitahuan sesi berakhir (dari auto logout 12 jam atau server).
+  // Pemberitahuan sesi berakhir hanya bila sesi berakhir saat aplikasi sedang dipakai.
   useEffect(() => {
     let wasExpired = false;
     try {
-      if (sessionStorage.getItem('audit:expired')) {
-        wasExpired = true;
+      const raw = sessionStorage.getItem('audit:expired');
+      if (raw) {
         sessionStorage.removeItem('audit:expired');
-      }
-      const exp = Number(localStorage.getItem('audit:exp'));
-      if (exp && exp <= Date.now()) {
-        wasExpired = true;
-        localStorage.removeItem('audit:exp');
+        const at = Number(raw);
+        // Marker lama tanpa waktu tetap ditampilkan sekali; marker baru hanya 60 detik.
+        wasExpired = raw === '1' || (Number.isFinite(at) && Date.now() - at < 60000);
       }
     } catch {
       /* ignore */
@@ -169,11 +166,6 @@ export default function Login({ initialExpired = false }: { initialExpired?: boo
         body: JSON.stringify({ role: sel, pin, area }),
       });
       const isDept = /^d/.test(r.area || '');
-      try {
-        localStorage.setItem('audit:exp', String(Date.now() + SESSION_TTL_HOURS * 60 * 60 * 1000));
-      } catch {
-        /* ignore */
-      }
       setExpired(false);
       setBusy(false);
       router.replace(defaultPath(r.role, isDept));

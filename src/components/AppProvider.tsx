@@ -14,7 +14,7 @@ const fetcher = (u: string) => fetch(u, { cache: 'no-store' }).then((r) => r.jso
 
 const markExpired = () => {
   try {
-    sessionStorage.setItem('audit:expired', '1');
+    sessionStorage.setItem('audit:expired', String(Date.now()));
   } catch {
     /* ignore */
   }

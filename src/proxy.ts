@@ -34,7 +34,7 @@ export async function proxy(req: NextRequest) {
 
   const isProtected = PROTECTED.some((p) => pathname === p || pathname.startsWith(p + '/'));
   if (!isProtected) return NextResponse.next();
-  if (!role) return NextResponse.redirect(new URL(token ? '/login?expired=1' : '/login', req.url));
+  if (!role) return NextResponse.redirect(new URL('/login', req.url));
 
   const allowed = allowedPaths(role);
   if (!allowed.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
